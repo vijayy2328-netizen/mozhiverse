@@ -58,10 +58,12 @@ If a Google key is set, enable Cloud Translation for that project and configure 
 - **Deaf / Read Mode**: Enlarged high-contrast captions with visual speaker tags. **Strict audio safety**: audio playback and speech synthesis are completely disabled in Read mode to protect Deaf and hard-of-hearing users.
 
 ### 2. Quick Conversation Actions & Message Reactions
-- **Message Reactions (👍, ❤️, 😂)**: In-memory real-time reactions with toggle support, count badges, active highlight states, full keyboard accessibility, and screen-reader `aria-label` and `aria-pressed` announcements.
+- **Accessible Clean Icon Reactions (Like, Love, Smile, Care)**: Crisp, high-contrast Lucide SVG icons with real-time in-memory counts, active highlight states, full keyboard accessibility, and screen-reader `aria-label` and `aria-pressed` announcements. Clean typography with no cluttered emojis.
 - **Dedicated "Please repeat" & "Slow down"**: One-tap buttons for rapid interjection without typing.
-- **Editable Quick Phrases**: Fully editable touch- and keyboard-friendly phrase board. Users can add custom phrases with emoji, remove unwanted phrases, or reset to defaults. All targets meet the 44px touch minimum.
-- **Urgent Message Cues**: Messages containing emergency or urgency keywords (e.g., "Help", "Emergency", "காப்பாற்றுங்கள்", "உதவி", "मदद") trigger a high-visibility urgent badge and border with ARIA alert announcements.
+- **Supportive Words & Care Board**: Empathetic pre-composed phrases with semantic category badges (Presence, Patience, Encouragement, Solidarity, Calm, Care).
+- **Sound-to-Sight Live Voice Radar (Visual Hearing Aid)**: Real-time 16-band audio frequency spectrum and decibel gauge (`dB`) providing Deaf and Hard-of-Hearing users with visual awareness of speech cadence, intensity, and pauses without audio. Includes a one-click "Test Radar" simulation.
+- **Emergency SOS Visual Beacon**: When emergency keywords are detected, an alert banner with pulsing visual strobe and 1-tap rapid response actions ("I am safe", "Need medical help", "Help is on the way") and haptic vibration pulse sequence activates automatically.
+- **Editable Quick Phrases**: Fully editable touch- and keyboard-friendly phrase board with category assignment and custom text entry. All targets meet the 44px touch minimum.
 
 ### 3. Safe Emotion / Tone Hint (Optional)
 - **Optional & Default OFF**: Users toggle it in Settings.
@@ -77,8 +79,9 @@ If a Google key is set, enable Cloud Translation for that project and configure 
 - **Text-to-Speech Speed Controller**: Adjustable voice speed rate ($0.5\times$ to $1.75\times$) in Settings for users needing slower speech for cognitive processing or language comprehension.
 - **Synthesized Message Chime**: Web Audio API two-tone audio alert on incoming messages (toggleable in Settings, automatically silenced in Deaf/Read mode).
 
-### 5. Transcript & Compact Session Summary
+### 5. Transcript, Smart Meeting Minutes & Session Summary
 - In-memory conversation logging with timestamps, original text, and translated text.
+- **Smart Meeting Minutes & Takeaways Generator**: Automatically extracts key discussion highlights, action items, safety signals, and language statistics into an executive summary card.
 - Compact summary of messages sent, participants in room, and active languages.
 - One-click "Copy Transcript" and "Download .txt" (`mozhiverse-<ROOM>-transcript.txt`).
 
