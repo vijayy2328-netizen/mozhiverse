@@ -1,33 +1,33 @@
-/* Mozhiverse Professional Product Design System
-   WCAG 2.1 AAA Accessible, Light Warm Palette, Zero Emojis, Zero AI Slop
+/* Mozhiverse Minimalist Product Design System
+   Award-Winning Light Warm Palette, High-Contrast Typography, Zero AI Slop, Zero Emojis
 */
 
 :root {
-  --bg-primary: #FAF8F5;
-  --bg-secondary: #F3EFEA;
-  --surface-card: #FFFFFF;
-  --surface-hover: #F8F5F0;
+  --bg-app: #FAF8F5;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #F4EFEA;
+  --bg-hover: #F8F4EE;
   
-  --border-subtle: #E8E2D8;
-  --border-medium: #D8D0C3;
-  --border-focus: #C85A32;
+  --border-light: #EBE5DC;
+  --border-medium: #DDD5C9;
+  --border-accent: #C85A32;
   
   --brand-terracotta: #C85A32;
-  --brand-terracotta-hover: #B04B26;
+  --brand-terracotta-hover: #AD4B26;
   --brand-terracotta-soft: #FDF3ED;
   --brand-terracotta-border: #F5D3C4;
   
-  --accent-amber: #B45309;
-  --accent-forest: #2E7D32;
-  --accent-slate: #4A5568;
+  --text-main: #1C1815;
+  --text-muted: #61574E;
+  --text-subtle: #8F8377;
   
-  --text-primary: #1F1916;
-  --text-secondary: #5C5249;
-  --text-muted: #8C8074;
+  --status-green: #2E7D32;
+  --status-amber: #B45309;
+  --status-red: #C53030;
   
-  --caption-bg: #1B1715;
+  --caption-bg: #1A1614;
   --caption-text: #FFFFFF;
-  --caption-highlight: #FFE082;
+  --caption-accent: #FFE082;
 }
 
 * {
@@ -35,110 +35,105 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-main);
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Professional Product Cards */
-.product-card {
-  background: var(--surface-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-  box-shadow: 0 1px 3px rgba(31, 25, 22, 0.04), 0 1px 2px rgba(31, 25, 22, 0.02);
-  transition: all 0.2s ease;
+/* Minimalist Elevated Cards */
+.clean-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(28, 24, 21, 0.04), 0 1px 2px rgba(28, 24, 21, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.product-card:hover {
+.clean-card:hover {
   border-color: var(--border-medium);
 }
 
-.product-card-elevated {
-  background: var(--surface-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(31, 25, 22, 0.05), 0 2px 4px -2px rgba(31, 25, 22, 0.03);
-}
-
-/* 3-Way Conference Tile */
-.participant-tile {
-  background: #FFFFFF;
-  border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-  padding: 16px;
+/* Hero Live Captions Canvas */
+.hero-caption-canvas {
+  background: var(--caption-bg);
+  color: var(--caption-text);
+  border-radius: 18px;
+  box-shadow: 0 8px 24px -4px rgba(26, 22, 20, 0.16);
   position: relative;
+  overflow: hidden;
   transition: all 0.2s ease;
 }
 
-.participant-tile.active-turn {
-  border-color: var(--brand-terracotta);
-  box-shadow: 0 0 0 2px rgba(200, 90, 50, 0.15);
-  background: #FFFAF7;
+.hero-caption-canvas.high-contrast {
+  background: #000000;
+  color: #FFFF00;
+  border: 2px solid #FFFF00;
 }
 
-/* Big Circular Continuous Mic Button */
-.circular-mic-btn {
-  width: 72px;
-  height: 72px;
+.caption-highlight-word {
+  color: var(--caption-accent);
+}
+
+/* Big Circular Continuous Microphone Toggle Button */
+.hero-circle-mic {
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
-  background: var(--surface-card);
+  background: #FFFFFF;
   border: 2px solid var(--border-medium);
   color: var(--brand-terracotta);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(31, 25, 22, 0.08);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(28, 24, 21, 0.08);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   outline: none;
 }
 
-.circular-mic-btn:hover {
-  transform: scale(1.05);
+.hero-circle-mic:hover {
+  transform: scale(1.06);
   border-color: var(--brand-terracotta);
   background: var(--brand-terracotta-soft);
+  box-shadow: 0 6px 20px rgba(200, 90, 50, 0.15);
 }
 
-.circular-mic-btn:active {
-  transform: scale(0.96);
+.hero-circle-mic:active {
+  transform: scale(0.95);
 }
 
-.circular-mic-btn.is-active {
+.hero-circle-mic.is-active {
   background: var(--brand-terracotta);
   border-color: var(--brand-terracotta-hover);
   color: #FFFFFF;
-  box-shadow: 0 0 0 6px rgba(200, 90, 50, 0.2), 0 8px 16px rgba(200, 90, 50, 0.3);
-  animation: continuousPulse 2s infinite ease-in-out;
+  box-shadow: 0 0 0 6px rgba(200, 90, 50, 0.2), 0 8px 24px rgba(200, 90, 50, 0.35);
+  animation: heroPulse 1.8s infinite ease-in-out;
 }
 
-@keyframes continuousPulse {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(200, 90, 50, 0.2), 0 6px 14px rgba(200, 90, 50, 0.25); }
-  50% { box-shadow: 0 0 0 10px rgba(200, 90, 50, 0.1), 0 8px 20px rgba(200, 90, 50, 0.35); }
+@keyframes heroPulse {
+  0%, 100% { box-shadow: 0 0 0 5px rgba(200, 90, 50, 0.22), 0 8px 22px rgba(200, 90, 50, 0.3); }
+  50% { box-shadow: 0 0 0 12px rgba(200, 90, 50, 0.08), 0 10px 28px rgba(200, 90, 50, 0.4); }
 }
 
-/* Captions Banner */
-.caption-banner {
-  background-color: var(--caption-bg);
-  color: var(--caption-text);
+/* Dynamic Participant Presence Pods */
+.presence-pod {
+  background: #FFFFFF;
+  border: 1px solid var(--border-light);
   border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  padding: 12px 14px;
   transition: all 0.2s ease;
 }
 
-.caption-banner.high-contrast {
-  background-color: #000000;
-  color: #FFFF00;
-  border: 2px solid #FFFF00;
+.presence-pod.speaking-glow {
+  border-color: var(--brand-terracotta);
+  background: #FFFBF9;
+  box-shadow: 0 0 0 2px rgba(200, 90, 50, 0.18);
 }
 
-.caption-highlight {
-  color: var(--caption-highlight);
-}
-
-/* Sound Bars */
+/* Sound Wave Equalizer */
 .sound-bars {
   display: inline-flex;
   align-items: center;
@@ -148,7 +143,7 @@ body {
 
 .sound-bar {
   width: 3px;
-  background-color: var(--brand-terracotta);
+  background-color: var(--caption-accent);
   border-radius: 2px;
   animation: pulseBar 1s ease-in-out infinite;
 }
@@ -164,13 +159,13 @@ body {
   50% { transform: scaleY(1); opacity: 1; }
 }
 
-/* Assistive Chips */
-.assistive-chip {
+/* Quick Assistive Action Buttons */
+.quick-chip {
   background: #FFFFFF;
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -180,20 +175,21 @@ body {
   gap: 6px;
 }
 
-.assistive-chip:hover {
+.quick-chip:hover {
   background: var(--brand-terracotta-soft);
   border-color: var(--brand-terracotta-border);
   color: var(--brand-terracotta);
+  transform: translateY(-1px);
 }
 
-.assistive-chip:active {
+.quick-chip:active {
   transform: scale(0.97);
 }
 
-/* Scrollbars */
+/* Sleek Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -201,10 +197,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #D8D0C3;
+  background: #DDD5C9;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #C4B9A9;
+  background: #C7BDAE;
 }
