@@ -1,81 +1,60 @@
 /**
- * Mozhiverse - Accessible Live Voice & Caption Bridge Engine
- * Ultra-simple, single-screen UI controller
+ * Mozhiverse - 3-Person Concurrent Multimodal Communication Engine
+ * Allows communicating across Anand (Tamil Voice), Sarah (Deaf Captions),
+ * and Liam (Non-Verbal Voice) concurrently on the same webpage at once.
  */
 
 const state = {
-  clientId: 'user_' + Math.random().toString(36).substring(2, 9),
+  clientId: 'hub_' + Math.random().toString(36).substring(2, 9),
   roomId: 'live-conference',
-  activeLanguage: 'en',
-  activeRole: 'anand', // 'anand' | 'sarah' | 'liam'
-  isContinuousListening: false,
   isAudioMuted: false,
   isHighContrast: false,
-  captionSize: 24,
-  websocket: null,
+  captionSize: 15,
+  anandMicActive: false,
   recognition: null,
-  outboxQueue: []
+  websocket: null,
+  seqCount: 1
 };
 
-// --- Gapless Streaming Audio Player ---
-class StreamingAudioPlayer {
+// --- Neural Audio Synthesis Player ---
+class MultiAudioPlayer {
   constructor() {
-    this.queue = [];
-    this.isPlaying = false;
     this.currentAudio = null;
   }
 
-  enqueue(audioDataUri) {
-    if (state.isAudioMuted || !audioDataUri) return;
-    this.queue.push(audioDataUri);
-    if (!this.isPlaying) {
-      this.playNext();
-    }
-  }
-
-  playNext() {
-    if (this.queue.length === 0) {
-      this.isPlaying = false;
-      this.currentAudio = null;
-      document.getElementById('liveSoundIndicator')?.classList.add('hidden');
+  playAudio(dataUri, onDone) {
+    if (state.isAudioMuted || !dataUri) {
+      if (onDone) onDone();
       return;
     }
-
-    this.isPlaying = true;
-    document.getElementById('liveSoundIndicator')?.classList.remove('hidden');
-
-    const nextAudioUri = this.queue.shift();
-    const audio = new Audio(nextAudioUri);
+    this.stop();
+    const audio = new Audio(dataUri);
     this.currentAudio = audio;
-
-    audio.onended = () => this.playNext();
-    audio.onerror = () => this.playNext();
-    audio.play().catch(() => this.playNext());
+    audio.onended = () => {
+      this.currentAudio = null;
+      if (onDone) onDone();
+    };
+    audio.onerror = () => {
+      this.currentAudio = null;
+      if (onDone) onDone();
+    };
+    audio.play().catch(() => {
+      if (onDone) onDone();
+    });
   }
 
-  stopAndCancel(showBargeInAlert = false) {
-    this.queue = [];
+  stop() {
     if (this.currentAudio) {
       this.currentAudio.pause();
       this.currentAudio = null;
     }
-    this.isPlaying = false;
-    document.getElementById('liveSoundIndicator')?.classList.add('hidden');
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-    }
-
-    if (showBargeInAlert) {
-      const alertBadge = document.getElementById('interruptionAlert');
-      if (alertBadge) {
-        alertBadge.classList.remove('hidden');
-        setTimeout(() => alertBadge.classList.add('hidden'), 2200);
-      }
     }
   }
 }
 
-const audioPlayer = new StreamingAudioPlayer();
+const audioPlayer = new MultiAudioPlayer();
 
 // --- WebSocket Connection ---
 function initWebSocket() {
@@ -86,168 +65,70 @@ function initWebSocket() {
   state.websocket = ws;
 
   ws.onopen = () => {
-    // Handshake
     ws.send(JSON.stringify({
       type: 'register',
-      name: getRoleName(state.activeRole),
-      language: state.activeLanguage,
+      name: 'Conference Hub',
+      language: 'en',
       input_modality: 'both',
       output_modality: 'both'
     }));
-
-    // Flush offline messages
-    while (state.outboxQueue.length > 0) {
-      ws.send(JSON.stringify(state.outboxQueue.shift()));
-    }
   };
 
-  ws.onclose = () => {
-    setTimeout(initWebSocket, 2000);
-  };
-
-  ws.onerror = (err) => {
-    console.error("WS error:", err);
-  };
+  ws.onclose = () => setTimeout(initWebSocket, 2000);
+  ws.onerror = (e) => console.warn("WS:", e);
 
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      handleMessage(data);
-    } catch (e) {
-      console.error("Parse error:", e);
-    }
+      if (data.type === 'message') {
+        renderGlobalMessage(data);
+      } else if (data.type === 'interim_speech') {
+        renderInterimCaptions(data.sender_name, data.text);
+      } else if (data.type === 'cancel_audio') {
+        audioPlayer.stop();
+        showBargeInAlert();
+      }
+    } catch (e) {}
   };
 }
 
-function handleMessage(msg) {
-  const mtype = msg.type;
+// =========================================================================
+// 1. ANAND ACTIONS (Tamil Voice Speaker)
+// =========================================================================
 
-  if (mtype === 'welcome') {
-    if (msg.transcript) {
-      msg.transcript.forEach(addTranscriptBubble);
-    }
-  }
-
-  else if (mtype === 'interim_speech') {
-    // Real-time live speech hypotheses (shows words as they are being spoken)
-    displayCaptions(msg.sender_name || 'Speaker', msg.text, msg.sender_lang, false);
-  }
-
-  else if (mtype === 'message') {
-    // Finalized message
-    displayCaptions(msg.sender_name || 'Speaker', msg.display_text || msg.original_text, msg.recipient_lang || msg.sender_lang, true);
-    addTranscriptBubble(msg);
-
-    if (msg.should_play_audio && !state.isAudioMuted && msg.sender_id !== state.clientId) {
-      fetchNeuralAudio(msg.display_text || msg.original_text, msg.recipient_lang);
-    }
-  }
-
-  else if (mtype === 'live_audio_chunk') {
-    // Low-latency streaming clause audio: plays immediately
-    if (msg.audio_data && msg.sender_id !== state.clientId) {
-      audioPlayer.enqueue(msg.audio_data);
-    }
-    displayCaptions(msg.sender_name || 'Speaking', msg.text, 'live', false);
-  }
-
-  else if (mtype === 'cancel_audio') {
-    audioPlayer.stopAndCancel(true);
-  }
-}
-
-// --- Live Captions Display ---
-function displayCaptions(speakerName, text, lang, isFinal) {
-  const captionEl = document.getElementById('liveCaptionText');
-  const speakerBadge = document.getElementById('speakerNameText');
-  const langBadge = document.getElementById('speakerLanguageBadge');
-  const soundBars = document.getElementById('liveSoundIndicator');
-
-  speakerBadge.textContent = speakerName || 'Live Audio';
-  langBadge.textContent = lang ? lang.toUpperCase() : 'LIVE';
-
-  if (!isFinal) {
-    captionEl.innerHTML = `<span class="caption-highlight">${escapeHtml(text)}</span> <span class="animate-pulse">|</span>`;
-    soundBars.classList.remove('hidden');
-  } else {
-    captionEl.innerHTML = escapeHtml(text);
-    setTimeout(() => soundBars.classList.add('hidden'), 1200);
-  }
-}
-
-// --- Transcript Chat Bubble ---
-function addTranscriptBubble(msg) {
-  const list = document.getElementById('transcriptList');
-  if (!list) return;
-
-  const item = document.createElement('div');
-  item.className = "chat-bubble space-y-1 shadow-xs";
-
-  const isSelf = msg.sender_id === state.clientId;
-  const senderColor = isSelf ? "text-[#C85A32]" : "text-[#1C1815]";
-  const timeStr = new Date(msg.timestamp ? msg.timestamp * 1000 : Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const seqLabel = msg.seq_id ? `#${msg.seq_id}` : '#1';
-  const modality = msg.input_modality === 'speech' ? 'Voice Mic' : (msg.is_aac ? '1-Click Voice' : 'Typed Text');
-
-  item.innerHTML = `
-    <div class="flex items-center justify-between text-xs">
-      <div class="flex items-center space-x-2">
-        <span class="px-1.5 py-0.5 rounded bg-[#F5EFE8] text-[10px] font-bold text-[#5C5248]">${seqLabel}</span>
-        <span class="font-bold ${senderColor}">${escapeHtml(msg.sender_name || (isSelf ? 'You' : 'Speaker'))}</span>
-        <span class="text-[10px] text-[#8A7E73]">(${modality})</span>
-      </div>
-      <div class="text-[10px] text-[#8A7E73]">${timeStr}</div>
-    </div>
-    <div class="text-xs text-[#1C1815] font-normal leading-relaxed pl-6">
-      ${escapeHtml(msg.display_text || msg.original_text || msg.text || '')}
-    </div>
-  `;
-
-  list.appendChild(item);
-  list.scrollTop = list.scrollHeight;
-}
-
-// --- Continuous Microphone (Single Click, No Holding) ---
-function toggleContinuousMic() {
+function toggleAnandMic() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    alert("Voice speech recognition is supported natively in Chrome, Edge, and Safari.");
+    alert("Speech recognition is supported natively in Chrome and Edge.");
     return;
   }
 
-  const btn = document.getElementById('continuousMicBtn');
-  const label = document.getElementById('micButtonText');
+  const btn = document.getElementById('anandMicBtn');
+  const text = document.getElementById('anandMicText');
 
-  if (state.isContinuousListening) {
-    // Stop
+  if (state.anandMicActive) {
     if (state.recognition) state.recognition.stop();
-    state.isContinuousListening = false;
+    state.anandMicActive = false;
     btn.classList.remove('is-active');
-    label.textContent = "Click to Speak (Live Mic)";
+    text.textContent = "Speak in Tamil (Live Mic)";
     return;
   }
 
-  // Start
   try {
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = state.activeLanguage === 'ta' ? 'ta-IN' : (state.activeLanguage === 'hi' ? 'hi-IN' : 'en-US');
+    recognition.lang = 'ta-IN'; // Tamil language
 
     recognition.onstart = () => {
-      state.isContinuousListening = true;
+      state.anandMicActive = true;
       btn.classList.add('is-active');
-      const langName = state.activeLanguage === 'ta' ? 'Tamil' : (state.activeLanguage === 'hi' ? 'Hindi' : 'English');
-      label.textContent = `Listening in ${langName} (Click to Stop)`;
-      displayCaptions(getRoleName(state.activeRole), "Microphone active. Speak now, listening live...", state.activeLanguage, false);
+      text.textContent = "Listening to Tamil... (Click to Stop)";
+      highlightSpeaker('panelAnand');
     };
 
-    let speechSilenceTimer = null;
-    let latestInterim = '';
-
-    recognition.onspeechstart = () => {
-      document.getElementById('liveSoundIndicator')?.classList.remove('hidden');
-    };
+    let silenceTimer = null;
+    let latestText = '';
 
     recognition.onresult = (event) => {
       let interim = '';
@@ -262,292 +143,334 @@ function toggleContinuousMic() {
       }
 
       if (interim) {
-        latestInterim = interim;
-        // Instant 0ms local display of words as they are being spoken
-        displayCaptions(getRoleName(state.activeRole), interim, state.activeLanguage, false);
-
-        // Stream to other participants
-        dispatch({
-          type: 'interim_speech',
-          turn_id: 'turn_live',
-          text: interim
-        });
-
-        // Fast pause auto-commit: If user stops talking for 1 second, commit turn immediately without waiting for browser lag
-        if (speechSilenceTimer) clearTimeout(speechSilenceTimer);
-        speechSilenceTimer = setTimeout(() => {
-          if (latestInterim && latestInterim.trim().length > 1) {
-            const textToCommit = latestInterim.trim();
-            latestInterim = '';
-            displayCaptions(getRoleName(state.activeRole), textToCommit, state.activeLanguage, true);
-            dispatch({
-              type: 'message',
-              text: textToCommit,
-              input_modality: 'speech'
-            });
+        latestText = interim;
+        renderInterimCaptions("Anand (Tamil Voice)", interim);
+        if (silenceTimer) clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(() => {
+          if (latestText && latestText.trim()) {
+            commitAnandSpeech(latestText.trim());
+            latestText = '';
           }
         }, 1100);
       }
 
       if (finalized) {
-        if (speechSilenceTimer) clearTimeout(speechSilenceTimer);
-        latestInterim = '';
-        displayCaptions(getRoleName(state.activeRole), finalized, state.activeLanguage, true);
-        dispatch({
-          type: 'message',
-          text: finalized,
-          input_modality: 'speech'
-        });
+        if (silenceTimer) clearTimeout(silenceTimer);
+        latestText = '';
+        commitAnandSpeech(finalized.trim());
       }
     };
 
-    recognition.onerror = (e) => console.warn("Recognition:", e.error);
-
     recognition.onend = () => {
-      if (state.isContinuousListening) {
+      if (state.anandMicActive) {
         try { recognition.start(); } catch (err) {}
       } else {
         btn.classList.remove('is-active');
-        label.textContent = "Click to Speak (Live Mic)";
+        text.textContent = "Speak in Tamil (Live Mic)";
       }
     };
 
     recognition.start();
     state.recognition = recognition;
   } catch (err) {
-    console.error("Recognition start error:", err);
+    console.error("Mic error:", err);
   }
 }
 
-function dispatch(payload) {
-  if (state.websocket && state.websocket.readyState === WebSocket.OPEN) {
-    state.websocket.send(JSON.stringify(payload));
-  } else {
-    state.outboxQueue.push(payload);
-  }
-}
-
-// --- Text-to-Speech Typing ---
-function sendTypedText() {
-  const input = document.getElementById('textInputComposer');
+function sendAnandText() {
+  const input = document.getElementById('anandTextInput');
   const text = input.value.trim();
   if (!text) return;
-
-  dispatch({
-    type: 'message',
-    text: text,
-    input_modality: 'text'
-  });
-
+  commitAnandSpeech(text);
   input.value = '';
 }
 
-// --- 1-Click Assistive Soundboard ---
-function triggerSoundboard(phrase) {
-  dispatch({
-    type: 'message',
-    text: phrase,
-    input_modality: 'aac',
-    is_aac: true
-  });
+async function commitAnandSpeech(text) {
+  highlightSpeaker('panelAnand');
+
+  // Translate Anand's Tamil text to English for Sarah & Liam
+  let englishTranslation = text;
+  try {
+    const res = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text, source_lang: 'ta', target_lang: 'en' })
+    });
+    const data = await res.json();
+    englishTranslation = data.translated_text || text;
+  } catch (e) {}
+
+  // 1. Update Sarah's live subtitles in English
+  updateSarahScreen("Anand (Tamil Speaker)", englishTranslation);
+
+  // 2. Add to canonical transcript
+  addTranscriptRow("Anand (Tamil Speaker)", text, englishTranslation, "Voice Mic");
+
+  // 3. Broadcast to WebSocket
+  if (state.websocket && state.websocket.readyState === WebSocket.OPEN) {
+    state.websocket.send(JSON.stringify({
+      type: 'message',
+      text: text,
+      input_modality: 'speech'
+    }));
+  }
 }
 
-// --- Neural Audio Synthesis ---
-function fetchNeuralAudio(text, lang) {
+// =========================================================================
+// 2. SARAH ACTIONS (Deaf Communicator)
+// =========================================================================
+
+function updateSarahScreen(speakerName, englishText) {
+  const subtitleEl = document.getElementById('sarahSubtitlesText');
+  const speakerTag = document.getElementById('sarahSpeakerTag');
+  subtitleEl.innerHTML = `<span class="caption-highlight">${escapeHtml(englishText)}</span>`;
+  speakerTag.textContent = `Live Speaker: ${speakerName}`;
+}
+
+function renderInterimCaptions(speakerName, interimText) {
+  const subtitleEl = document.getElementById('sarahSubtitlesText');
+  const speakerTag = document.getElementById('sarahSpeakerTag');
+  subtitleEl.innerHTML = `<span class="text-[#FFE082]">${escapeHtml(interimText)}</span> <span class="animate-pulse">|</span>`;
+  speakerTag.textContent = `Speaking: ${speakerName}`;
+}
+
+async function sendSarahText() {
+  const input = document.getElementById('sarahTextInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  highlightSpeaker('panelSarah');
+
+  // Translate Sarah's English to Tamil for Anand
+  let tamilTranslation = text;
+  try {
+    const res = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text, source_lang: 'en', target_lang: 'ta' })
+    });
+    const data = await res.json();
+    tamilTranslation = data.translated_text || text;
+  } catch (e) {}
+
+  // 1. Update Anand's audio output (Anand hears synthesized Tamil voice)
+  updateAnandAudioOutput(`Heard: "${tamilTranslation}"`);
+  playNeuralVoice(tamilTranslation, 'ta');
+
+  // 2. Sarah's screen confirms her message
+  updateSarahScreen("You (Sarah)", text);
+
+  // 3. Add to canonical transcript
+  addTranscriptRow("Sarah (Deaf Communicator)", text, tamilTranslation, "Typed Captions");
+}
+
+// =========================================================================
+// 3. LIAM ACTIONS (Non-Verbal / AAC)
+// =========================================================================
+
+function triggerLiamAAC(phrase) {
+  commitLiamSpeech(phrase, true);
+}
+
+function sendLiamText() {
+  const input = document.getElementById('liamTextInput');
+  const text = input.value.trim();
+  if (!text) return;
+  commitLiamSpeech(text, false);
+  input.value = '';
+}
+
+async function commitLiamSpeech(englishText, isAAC) {
+  highlightSpeaker('panelLiam');
+
+  // Translate Liam's English to Tamil for Anand
+  let tamilTranslation = englishText;
+  try {
+    const res = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: englishText, source_lang: 'en', target_lang: 'ta' })
+    });
+    const data = await res.json();
+    tamilTranslation = data.translated_text || englishText;
+  } catch (e) {}
+
+  // 1. Update Sarah's live captions screen in English
+  updateSarahScreen("Liam (Non-Verbal AAC)", englishText);
+
+  // 2. Play synthesized Tamil voice for Anand
+  updateAnandAudioOutput(`Heard from Liam: "${tamilTranslation}"`);
+  playNeuralVoice(tamilTranslation, 'ta');
+
+  // 3. Add to canonical transcript
+  addTranscriptRow("Liam (Non-Verbal AAC)", englishText, tamilTranslation, isAAC ? "1-Click AAC" : "Typed Voice");
+}
+
+// =========================================================================
+// SYNCHRONIZED HELPERS & TRANSCRIPT
+// =========================================================================
+
+function updateAnandAudioOutput(displayText) {
+  const textEl = document.getElementById('anandAudioText');
+  const soundBars = document.getElementById('anandAudioIndicator');
+  if (textEl) textEl.textContent = displayText;
+  if (soundBars) {
+    soundBars.classList.remove('hidden');
+    setTimeout(() => soundBars.classList.add('hidden'), 2800);
+  }
+}
+
+function playNeuralVoice(text, lang) {
   fetch('/api/tts/speak', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: text, language: lang || state.activeLanguage })
+    body: JSON.stringify({ text: text, language: lang })
   })
-  .then(res => res.json())
+  .then(r => r.json())
   .then(data => {
-    if (data.audio_data) audioPlayer.enqueue(data.audio_data);
+    if (data.audio_data) audioPlayer.playAudio(data.audio_data);
   })
   .catch(() => {
     if ('speechSynthesis' in window) {
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.lang = lang === 'ta' ? 'ta-IN' : 'en-US';
-      window.speechSynthesis.speak(utt);
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang === 'ta' ? 'ta-IN' : 'en-US';
+      window.speechSynthesis.speak(u);
     }
   });
 }
 
-// --- Role Switcher (Anand / Sarah / Liam) ---
-function switchUserRole(role) {
-  state.activeRole = role;
-  ['tabAnand', 'tabSarah', 'tabLiam'].forEach(id => {
-    document.getElementById(id)?.classList.remove('active');
+function addTranscriptRow(sender, original, translated, modality) {
+  const list = document.getElementById('transcriptList');
+  if (!list) return;
+
+  const seq = state.seqCount++;
+  const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  const row = document.createElement('div');
+  row.className = "chat-row space-y-1 shadow-xs";
+
+  let senderColor = "#C85A32";
+  if (sender.includes("Sarah")) senderColor = "#2E7D32";
+  if (sender.includes("Liam")) senderColor = "#B45309";
+
+  row.innerHTML = `
+    <div class="flex items-center justify-between text-xs">
+      <div class="flex items-center space-x-2">
+        <span class="px-1.5 py-0.5 rounded bg-[#F5EFE8] text-[10px] font-bold text-[#5C5248]">#${seq}</span>
+        <span class="font-bold" style="color: ${senderColor}">${escapeHtml(sender)}</span>
+        <span class="text-[10px] text-[#8A7E73]">(${modality})</span>
+      </div>
+      <span class="text-[10px] text-[#8A7E73]">${timeStr}</span>
+    </div>
+    <div class="text-xs text-[#1C1815] pl-6 space-y-0.5">
+      <div><strong>Original:</strong> "${escapeHtml(original)}"</div>
+      <div class="text-[#5C5248]"><strong>Cross-Translation:</strong> "${escapeHtml(translated)}"</div>
+    </div>
+  `;
+
+  list.appendChild(row);
+  list.scrollTop = list.scrollHeight;
+}
+
+function highlightSpeaker(panelId) {
+  ['panelAnand', 'panelSarah', 'panelLiam'].forEach(id => {
+    document.getElementById(id)?.classList.remove('is-active-speaker');
   });
+  document.getElementById(panelId)?.classList.add('is-active-speaker');
+}
 
-  const activeTab = role === 'anand' ? 'tabAnand' : (role === 'sarah' ? 'tabSarah' : 'tabLiam');
-  document.getElementById(activeTab)?.classList.add('active');
-
-  const langSelect = document.getElementById('activeLanguageSelect');
-  const micLabel = document.getElementById('micButtonText');
-
-  if (role === 'anand') {
-    state.activeLanguage = 'ta';
-    if (langSelect) langSelect.value = 'ta';
-    if (micLabel) micLabel.textContent = "Click to Speak (Tamil Voice)";
-  } else if (role === 'sarah') {
-    state.activeLanguage = 'en';
-    if (langSelect) langSelect.value = 'en';
-    if (micLabel) micLabel.textContent = "Click to Speak (Live Mic)";
-  } else {
-    state.activeLanguage = 'en';
-    if (langSelect) langSelect.value = 'en';
-    if (micLabel) micLabel.textContent = "Click to Speak (English Voice)";
+function showBargeInAlert() {
+  const banner = document.getElementById('interruptionBanner');
+  if (banner) {
+    banner.classList.remove('hidden');
+    setTimeout(() => banner.classList.add('hidden'), 2500);
   }
-
-  // Update profile on the server
-  dispatch({
-    type: 'update_profile',
-    updates: {
-      name: getRoleName(role),
-      language: state.activeLanguage,
-      input_modality: role === 'anand' ? 'speech' : (role === 'liam' ? 'text' : 'both'),
-      output_modality: role === 'sarah' ? 'captions' : 'audio'
-    }
-  });
-
-  changeLanguage(state.activeLanguage);
 }
 
-function getRoleName(role) {
-  if (role === 'anand') return 'Anand (Tamil Speaker)';
-  if (role === 'sarah') return 'Sarah (Deaf Captions)';
-  return 'Liam (Non-Verbal AAC)';
-}
-
-function changeLanguage(lang) {
-  state.activeLanguage = lang;
-  const langTag = lang === 'ta' ? 'ta-IN' : (lang === 'hi' ? 'hi-IN' : (lang === 'es' ? 'es-ES' : (lang === 'fr' ? 'fr-FR' : 'en-US')));
-  if (state.recognition) {
-    state.recognition.lang = langTag;
-    if (state.isContinuousListening) {
-      try {
-        state.recognition.stop();
-        setTimeout(() => {
-          if (state.isContinuousListening) {
-            try { state.recognition.start(); } catch (err) {}
-          }
-        }, 120);
-      } catch (e) {}
-    }
-  }
-
-  const micLabel = document.getElementById('micButtonText');
-  if (micLabel && state.isContinuousListening) {
-    const langName = lang === 'ta' ? 'Tamil' : (lang === 'hi' ? 'Hindi' : 'English');
-    micLabel.textContent = `Listening in ${langName} (Click to Stop)`;
-  }
-
-  // Update profile on server
-  dispatch({
-    type: 'update_profile',
-    updates: {
-      language: lang
-    }
-  });
-}
-
-// --- Auto 3-Way Scenario Demonstration (For Judges) ---
+// --- Automated 3-Way Scenario Demonstration (For Judges) ---
 function runAuto3WayDemo() {
-  audioPlayer.stopAndCancel(false);
+  audioPlayer.stop();
 
-  const scenario = [
+  const steps = [
     {
-      speaker: 'Anand (Tamil Speaker)',
-      role: 'anand',
-      text: 'வணக்கம், நாம் இன்றைய கலந்துரையாடலை தொடங்கலாமா?',
-      translated: 'Hello, shall we begin today\'s discussion?',
-      lang: 'ta',
-      targetLang: 'en',
+      speaker: "Anand (Tamil Speaker)",
+      panel: "panelAnand",
+      text: "வணக்கம், நாம் இன்றைய கலந்துரையாடலை தொடங்கலாமா?",
+      english: "Hello, shall we begin today's discussion?",
       delay: 500,
-      modality: 'speech'
+      action: () => {
+        highlightSpeaker('panelAnand');
+        updateSarahScreen("Anand (Tamil Speaker)", "Hello, shall we begin today's discussion?");
+        addTranscriptRow("Anand (Tamil Speaker)", "வணக்கம், நாம் இன்றைய கலந்துரையாடலை தொடங்கலாமா?", "Hello, shall we begin today's discussion?", "Voice Mic");
+      }
     },
     {
-      speaker: 'Sarah (Deaf Communicator)',
-      role: 'sarah',
-      text: 'I can read your Tamil speech clearly on my English captions screen.',
-      translated: 'உங்கள் தமிழ் பேச்சை எனது ஆங்கில தலைப்புகளில் தெளிவாக படிக்க முடிகிறது.',
-      lang: 'en',
-      targetLang: 'ta',
-      delay: 3400,
-      modality: 'captions'
+      speaker: "Sarah (Deaf Communicator)",
+      panel: "panelSarah",
+      text: "I can read your speech clearly on my English captions screen.",
+      tamil: "உங்கள் பேச்சை எனது ஆங்கில தலைப்புகளில் தெளிவாக படிக்க முடிகிறது.",
+      delay: 3500,
+      action: () => {
+        highlightSpeaker('panelSarah');
+        updateSarahScreen("You (Sarah)", "I can read your speech clearly on my English captions screen.");
+        updateAnandAudioOutput('Heard: "உங்கள் பேச்சை எனது ஆங்கில தலைப்புகளில் தெளிவாக படிக்க முடிகிறது."');
+        playNeuralVoice("உங்கள் பேச்சை எனது ஆங்கில தலைப்புகளில் தெளிவாக படிக்க முடிகிறது.", "ta");
+        addTranscriptRow("Sarah (Deaf Communicator)", "I can read your speech clearly on my English captions screen.", "உங்கள் பேச்சை எனது ஆங்கில தலைப்புகளில் தெளிவாக படிக்க முடிகிறது.", "Typed Captions");
+      }
     },
     {
-      speaker: 'Liam (Non-Verbal AAC)',
-      role: 'liam',
-      text: 'I am typing this via the soundboard, and you are hearing it as spoken voice.',
-      translated: 'நான் இதை ஒலி பலகை மூலம் தட்டச்சு செய்கிறேன், அதை நீங்கள் பேசும் குரலாகக் கேட்கிறீர்கள்.',
-      lang: 'en',
-      targetLang: 'ta',
-      delay: 6600,
-      modality: 'aac'
+      speaker: "Liam (Non-Verbal AAC)",
+      panel: "panelLiam",
+      text: "I am typing via the AAC soundboard, and you hear it as spoken voice.",
+      tamil: "நான் ஒலி பலகை மூலம் தட்டச்சு செய்கிறேன், அதை நீங்கள் பேசும் குரலாகக் கேட்கிறீர்கள்.",
+      delay: 7000,
+      action: () => {
+        highlightSpeaker('panelLiam');
+        updateSarahScreen("Liam (Non-Verbal AAC)", "I am typing via the AAC soundboard, and you hear it as spoken voice.");
+        updateAnandAudioOutput('Heard from Liam: "நான் ஒலி பலகை மூலம் தட்டச்சு செய்கிறேன், அதை நீங்கள் பேசும் குரலாகக் கேட்கிறீர்கள்."');
+        playNeuralVoice("நான் ஒலி பலகை மூலம் தட்டச்சு செய்கிறேன், அதை நீங்கள் பேசும் குரலாகக் கேட்கிறீர்கள்.", "ta");
+        addTranscriptRow("Liam (Non-Verbal AAC)", "I am typing via the AAC soundboard, and you hear it as spoken voice.", "நான் ஒலி பலகை மூலம் தட்டச்சு செய்கிறேன், அதை நீங்கள் பேசும் குரலாகக் கேட்கிறீர்கள்.", "1-Click AAC");
+      }
     },
     {
-      speaker: 'Anand (Barge-In Interruption)',
-      role: 'anand',
-      text: 'சரியாக சொன்னீர்கள், குறுக்கீடுகள் வந்தாலும் நமது உரையாடல் தடையின்றி நடக்கிறது!',
-      translated: 'Exactly right, even when interruptions occur our conversation continues seamlessly!',
-      lang: 'ta',
-      targetLang: 'en',
-      delay: 9600,
-      modality: 'speech',
-      isBargeIn: true
+      speaker: "Anand (Barge-in Interruption)",
+      panel: "panelAnand",
+      text: "சரியாக சொன்னீர்கள், குறுக்கீடுகள் வந்தாலும் நமது உரையாடல் தடையின்றி நடக்கிறது!",
+      english: "Exactly right, even when interruptions occur our conversation continues seamlessly!",
+      delay: 10500,
+      action: () => {
+        audioPlayer.stop();
+        showBargeInAlert();
+        highlightSpeaker('panelAnand');
+        updateSarahScreen("Anand (Barge-in Interruption)", "Exactly right, even when interruptions occur our conversation continues seamlessly!");
+        addTranscriptRow("Anand (Barge-in Interruption)", "சரியாக சொன்னீர்கள், குறுக்கீடுகள் வந்தாலும் நமது உரையாடல் தடையின்றி நடக்கிறது!", "Exactly right, even when interruptions occur our conversation continues seamlessly!", "Voice Mic");
+      }
     }
   ];
 
-  scenario.forEach((step, idx) => {
-    setTimeout(() => {
-      switchUserRole(step.role);
-
-      if (step.isBargeIn) {
-        audioPlayer.stopAndCancel(true);
-      }
-
-      displayCaptions(step.speaker, step.translated, step.targetLang, true);
-
-      addTranscriptBubble({
-        seq_id: idx + 1,
-        sender_id: 'demo_' + step.role,
-        sender_name: step.speaker,
-        original_text: step.text,
-        display_text: `${step.text} → [${step.targetLang.toUpperCase()}]: ${step.translated}`,
-        input_modality: step.modality,
-        timestamp: Date.now() / 1000
-      });
-
-      if (!state.isAudioMuted && step.role !== 'sarah') {
-        fetchNeuralAudio(step.translated, step.targetLang);
-      }
-    }, step.delay);
-  });
+  steps.forEach(step => setTimeout(step.action, step.delay));
 }
 
 // Accessibility toggles
 function toggleHighContrast() {
   state.isHighContrast = !state.isHighContrast;
-  const container = document.getElementById('captionContainer');
-  if (state.isHighContrast) {
-    container.classList.add('high-contrast');
-  } else {
-    container.classList.remove('high-contrast');
-  }
+  const screen = document.getElementById('sarahCaptionsScreen');
+  if (state.isHighContrast) screen.classList.add('high-contrast');
+  else screen.classList.remove('high-contrast');
 }
 
 function adjustCaptionSize(delta) {
-  state.captionSize = Math.max(16, Math.min(42, state.captionSize + delta * 3));
-  const captionEl = document.getElementById('liveCaptionText');
-  captionEl.style.fontSize = `${state.captionSize}px`;
+  state.captionSize = Math.max(12, Math.min(28, state.captionSize + delta * 2));
+  const el = document.getElementById('sarahSubtitlesText');
+  if (el) el.style.fontSize = `${state.captionSize}px`;
 }
 
 function toggleAudioMute() {
   state.isAudioMuted = !state.isAudioMuted;
   const icon = document.getElementById('muteIcon');
   if (state.isAudioMuted) {
-    audioPlayer.stopAndCancel(false);
+    audioPlayer.stop();
     icon.setAttribute('data-lucide', 'volume-x');
   } else {
     icon.setAttribute('data-lucide', 'volume-2');
@@ -557,25 +480,20 @@ function toggleAudioMute() {
 
 function escapeHtml(str) {
   if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   initWebSocket();
   lucide.createIcons();
 
-  // Check URL params for role (e.g. ?role=anand, ?role=sarah, ?role=liam)
-  const urlParams = new URLSearchParams(window.location.search);
-  const roleParam = urlParams.get('role');
-  if (roleParam && ['anand', 'sarah', 'liam'].includes(roleParam.toLowerCase())) {
-    setTimeout(() => switchUserRole(roleParam.toLowerCase()), 350);
-  }
-
-  document.getElementById('textInputComposer')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendTypedText();
+  document.getElementById('anandTextInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendAnandText();
+  });
+  document.getElementById('sarahTextInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendSarahText();
+  });
+  document.getElementById('liamTextInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendLiamText();
   });
 });
