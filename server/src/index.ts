@@ -147,6 +147,68 @@ function validLanguage(x: unknown): x is Language {
   return supportedLanguages.includes(String(x) as Language);
 }
 
+function generateHumanReply(text: string, lang: Language): string {
+  const lower = text.toLowerCase();
+
+  if (isEmergency(text)) {
+    return lang === "English"
+      ? "Hang in there! Are you safe right now? I'm staying right here with you."
+      : "பயப்படாதீர்கள்! நான் உங்களுடனேயே இருக்கிறேன். உதவிக்கு ஏற்பாடு செய்கிறேன்.";
+  }
+  if (lower.includes("repeat") || lower.includes("மீண்டும்") || lower.includes("சொல்லு")) {
+    return lang === "English"
+      ? "No problem at all! Let me say that again more clearly for you."
+      : "நிச்சயமாக! மீண்டும் ஒருமுறை தெளிவாக கூறுகிறேன்.";
+  }
+  if (lower.includes("slow") || lower.includes("மெதுவாக")) {
+    return lang === "English"
+      ? "Got it, absolutely! I will take it nice and easy. Let me know if this pace is better for you."
+      : "சரிங்க, இனி நிதானமாக பேசலாம். இப்போது வசதியாக இருக்கிறதா?";
+  }
+  if (lower.includes("how are you") || lower.includes("how r u") || lower.includes("எப்படி இருக்கிறீர்கள்") || lower.includes("நலமா")) {
+    return lang === "English"
+      ? "Doing well, thank you for asking! Enjoying our chat here. How about yourself?"
+      : "நான் நன்றாக இருக்கிறேன், நீங்கள் எப்படி இருக்கிறீர்கள்? நலமா?";
+  }
+  if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey") || lower.includes("வணக்கம்") || lower.includes("नमस्ते")) {
+    return lang === "English"
+      ? "Hey there! Really good to hear from you. What are you working on today?"
+      : "வணக்கம்! உங்களுடன் பேசுவதில் மிக்க மகிழ்ச்சி. இன்று என்ன செய்து கொண்டிருக்கிறீர்கள்?";
+  }
+  if (lower.includes("thank") || lower.includes("thx") || lower.includes("நன்றி") || lower.includes("धन्यवाद")) {
+    return lang === "English"
+      ? "You're so welcome! Truly happy to talk with you."
+      : "மிக்க மகிழ்ச்சி! எப்போதும் உதவத் தயாராக இருக்கிறேன்.";
+  }
+  if (lower.includes("here with you") || lower.includes("take your time") || lower.includes("doing great") || lower.includes("warmth") || lower.includes("அமைதி")) {
+    return lang === "English"
+      ? "Thank you so much, that means a lot! Sending warm wishes right back to you."
+      : "மிகவும் நன்றி! உங்கள் அன்பான வார்த்தைகள் மனதிற்கு இதமாக இருக்கிறது.";
+  }
+  if (lower.includes("?") || lower.includes("what") || lower.includes("where") || lower.includes("why") || lower.includes("who") || lower.includes("எங்கே") || lower.includes("என்ன")) {
+    return lang === "English"
+      ? "That's a thoughtful question! In my experience it really helps to take it step by step. What are your thoughts?"
+      : "நல்ல கேள்வி! நிதானமாக யோசித்து செயல்பட்டால் சிறப்பாக இருக்கும். உங்கள் கருத்து என்ன?";
+  }
+
+  const humanRepliesEn = [
+    "I completely understand where you're coming from. Tell me more about that!",
+    "That makes so much sense. I'm really glad we're talking about this.",
+    "That sounds wonderful! It's so nice to connect across languages like this.",
+    "I hear you! How has your day been treating you so far?"
+  ];
+  const humanRepliesTa = [
+    "கண்டிப்பாக! நீங்கள் சொல்வது முற்றிலும் புரிகிறது. மேலும் சொல்லுங்கள்!",
+    "மிகவும் அருமை! வெவ்வேறு மொழிகள் பேசினாலும் இப்படி உரையாடுவது மகிழ்ச்சி தருகிறது.",
+    "புரிந்தது! உங்கள் அனுபவம் கேட்க மிகவும் ஆர்வமாக உள்ளது.",
+    "நிச்சயமாக, நானும் இதையே நினைக்கிறேன்! நீங்கள் சொல்வது சரிதான்."
+  ];
+
+  const pool = lang === "English" ? humanRepliesEn : humanRepliesTa;
+  const hash = Math.abs(text.split("").reduce((a, b) => a + b.charCodeAt(0), 0));
+  return pool[hash % pool.length];
+}
+
 io.on("connection", socket => {
   let roomCode: string | undefined;
   let self: Participant | undefined;
@@ -186,7 +248,7 @@ io.on("connection", socket => {
 
     // Pick a complementary language
     const simLang: Language = self.language === "Tamil" ? "English" : "Tamil";
-    const simName = simLang === "English" ? "Alex (English)" : "Priya (தமிழ்)";
+    const simName = simLang === "English" ? "Alex" : "Priya";
     const simId = "sim-" + randomUUID().slice(0, 6);
 
     const simParticipant: Participant = {
@@ -213,8 +275,8 @@ io.on("connection", socket => {
         io.to(roomCode!).emit("participant:activity", { id: simId, typing: false });
 
         const simGreeting = simLang === "English"
-          ? "Hello! Great to connect with you on Mozhiverse. How are you doing today?"
-          : "வணக்கம்! மொழிவர்ஸில் உங்களை சந்தித்ததில் மிக்க மகிழ்ச்சி.";
+          ? "Hey! Glad we connected. How is your day going?"
+          : "வணக்கம்! உங்களை சந்தித்ததில் மிக்க மகிழ்ச்சி. இன்றைய நாள் எப்படி போகிறது?";
 
         const uniqueLangs = Array.from(new Set(r.participants.map(p => p.language)));
         const translations: Partial<Record<Language, string>> = {};
@@ -347,25 +409,7 @@ io.on("connection", socket => {
         setTimeout(async () => {
           io.to(roomCode!).emit("participant:activity", { id: simPartner.id, typing: false });
 
-          let replyText = "";
-          const lower = rawText.toLowerCase();
-          if (isEmergency(rawText)) {
-            replyText = simPartner.language === "English"
-              ? "Emergency noted! Stay calm, assistance has been notified."
-              : "அவசர நிலை பதிவு செய்யப்பட்டது! அமைதியாக இருங்கள்.";
-          } else if (lower.includes("repeat") || lower.includes("மீண்டும்")) {
-            replyText = simPartner.language === "English"
-              ? "Sure! I'll repeat that more slowly."
-              : "நிச்சயமாக! நான் அதை இன்னும் தெளிவாக கூறுகிறேன்.";
-          } else if (lower.includes("slow") || lower.includes("மெதுவாக")) {
-            replyText = simPartner.language === "English"
-              ? "Understood, slowing down our conversation pace."
-              : "புரிந்தது, இனி மெதுவாக உரையாடுவோம்.";
-          } else {
-            replyText = simPartner.language === "English"
-              ? "I understand. Thank you for sharing!"
-              : "புரிந்தது. பகிர்ந்தமைக்கு நன்றி!";
-          }
+          const replyText = generateHumanReply(rawText, simPartner.language);
 
           const targetLangs = Array.from(new Set(curr.participants.map(p => p.language)));
           const replyTranslations: Partial<Record<Language, string>> = {};

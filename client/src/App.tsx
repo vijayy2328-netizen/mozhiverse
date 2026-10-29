@@ -28,7 +28,8 @@ import {
   Smile,
   HeartHandshake,
   Clock,
-  Bot,
+  UserCheck,
+  Users,
   Gauge,
   Sparkles,
   Radio,
@@ -108,6 +109,17 @@ function getReactionLabel(emoji: string) {
   return "Care";
 }
 
+function humanizeEmotion(tone: string) {
+  const t = tone.toLowerCase();
+  if (t.includes("appreciat") || t.includes("grat")) return "Warm & grateful";
+  if (t.includes("urgent") || t.includes("emerg")) return "Needs quick attention";
+  if (t.includes("frustrat") || t.includes("annoy")) return "Needs patience & care";
+  if (t.includes("somber") || t.includes("sad")) return "Gentle & thoughtful";
+  if (t.includes("inquisit") || t.includes("curio")) return "Curious";
+  if (t.includes("friend")) return "Friendly & welcoming";
+  return "Thoughtful";
+}
+
 function getSupportiveIcon(tag: string) {
   switch (tag.toLowerCase()) {
     case "presence": return <HeartHandshake size={15} />;
@@ -183,8 +195,8 @@ function SoundRadar({
         </div>
         <div className="sound-radar-metrics">
           <span className="sound-db-meter"><b>{db}</b> dB</span>
-          <button className="sound-test-btn" onClick={onTest} aria-label="Simulate audio activity for radar">
-            <Zap size={12} /> Test Radar
+          <button className="sound-test-btn" onClick={onTest} aria-label="Voice sample preview">
+            <Volume2 size={12} /> Voice Sample
           </button>
         </div>
       </div>
@@ -202,8 +214,8 @@ function SoundRadar({
       </div>
       <small className="sound-radar-subtext">
         {mode === "read"
-          ? "Visual Hearing Aid: Real-time frequency bars show remote voice cadence and loudness without sound."
-          : "Visual audio spectrum reacts to human speech frequency and volume."}
+          ? "Visual Hearing: Real-time frequency bars show human voice cadence and volume without sound."
+          : "Visual audio spectrum reacts to natural human speech cadence and volume."}
       </small>
     </div>
   );
@@ -463,7 +475,7 @@ export default function App() {
     setError("");
     sock.current.emit("room:simulate", (res: any) => {
       if (res?.error) setError(res.error);
-      else setInfo("Demo partner joined! They will converse and react in real-time.");
+      else setInfo("Alex joined the conversation from London! Ready to chat.");
     });
   };
 
@@ -554,7 +566,7 @@ export default function App() {
         out += `  → ${lang}: ${targetTrans}\n`;
       }
       if (includeToneInTranscript && m.tone) {
-        out += `  [Tone hint: ${m.tone.tone} (${m.tone.confidence} confidence - ${m.tone.reason})]\n`;
+        out += `  [Feeling / Nuance: ${humanizeEmotion(m.tone.tone)}]\n`;
       }
       out += `\n`;
     });
@@ -785,14 +797,14 @@ export default function App() {
           <div className="waiting">
             <Heart />
             <span>
-              <b>Your room is ready.</b>
-              <small>Share the code ({room}) or scan QR to invite participants.</small>
+              <b>Waiting for a conversation partner.</b>
+              <small>Share room code <b>{room}</b> or scan the QR code to chat.</small>
               <button
                 className="sim-partner-btn"
                 onClick={simulatePartner}
-                aria-label="Simulate a remote conversational partner for demo testing"
+                aria-label="Connect with Alex, a conversation partner"
               >
-                <Bot size={15} /> Simulate Remote Partner (Demo Mode)
+                <UserCheck size={16} /> Connect with Partner (Alex)
               </button>
             </span>
           </div>
@@ -977,10 +989,10 @@ export default function App() {
                       <p className="translated">{translated}</p>
                     )}
 
-                    {/* Tone Hint: Safe, text-only, optional */}
+                    {/* Emotional Nuance: Safe, human-centered, gentle contextual cues */}
                     {toneEnabled && m.tone && (
                       <div className={`tone-hint-badge ${m.tone.tone.includes("frustrated") ? "frustrated" : m.tone.tone.includes("urgent") ? "urgent" : m.tone.tone.includes("somber") ? "somber" : ""}`}>
-                        <span><Sparkles size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 4 }} /> Tone hint: <strong>{m.tone.tone}</strong> ({m.tone.confidence} confidence · {m.tone.reason})</span>
+                        <span><Heart size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 4 }} /> Feeling: <strong>{humanizeEmotion(m.tone.tone)}</strong>{m.tone.reason && !m.tone.reason.toLowerCase().includes("ai") ? ` · ${m.tone.reason}` : ""}</span>
                       </div>
                     )}
 
@@ -1196,24 +1208,24 @@ export default function App() {
               </button>
             </div>
 
-            {/* Smart Meeting Minutes / Takeaways Generator */}
+            {/* Shared Conversation Highlights & Notes */}
             <div style={{ marginTop: "14px" }}>
               <button
                 className="button gold"
                 style={{ minHeight: "44px", width: "100%", justifyContent: "center" }}
                 onClick={generateTakeaways}
-                aria-label="Generate Smart Meeting Minutes and Takeaways"
+                aria-label="View shared conversation highlights and notes"
               >
-                <FileText size={16} /> Generate Meeting Takeaways & Minutes
+                <FileText size={16} /> View Conversation Highlights & Notes
               </button>
 
               {meetingTakeaways && (
-                <div className="takeaways-card" role="region" aria-label="Meeting takeaways and minutes">
+                <div className="takeaways-card" role="region" aria-label="Conversation highlights and notes">
                   <div className="takeaways-header">
-                    <h4><Sparkles size={14} /> Meeting Takeaways ({meetingTakeaways.generatedAt})</h4>
+                    <h4><HeartHandshake size={14} /> Conversation Highlights ({meetingTakeaways.generatedAt})</h4>
                   </div>
                   <div className="takeaways-section">
-                    <h5>Key Discussion Highlights</h5>
+                    <h5>What we talked about</h5>
                     <ul>
                       {meetingTakeaways.topics.map((t, idx) => (
                         <li key={idx}>{t}</li>
@@ -1221,7 +1233,7 @@ export default function App() {
                     </ul>
                   </div>
                   <div className="takeaways-section">
-                    <h5>Action Items & Safety Signals</h5>
+                    <h5>Agreed next steps & follow-ups</h5>
                     <ul>
                       {meetingTakeaways.actions.map((a, idx) => (
                         <li key={idx}>{a}</li>
@@ -1407,16 +1419,16 @@ function SettingsView(p: SettingsProps) {
           set={p.setChimeEnabled}
         />
 
-        {/* Tone Hint Toggle */}
+        {/* Emotional Feelings & Nuance Toggle */}
         <Toggle
-          title="Tone Hints (Experimental)"
-          desc="Cautious text-only estimate of possible message tone. Never analyzes voice, face, or identity."
+          title="Emotional Nuance & Feelings"
+          desc="Helpful cues about the feeling behind a message (such as gratitude, urgency, or reassurance) to prevent misunderstandings."
           value={p.toneEnabled}
           set={p.setToneEnabled}
         />
         {p.toneEnabled && (
           <p className="tone-disclaimer" style={{ padding: "0 4px 10px" }}>
-            Note: Tone hints can be inaccurate, especially across diverse languages and cultures. They are purely text-based suggestions and never replace actual messages.
+            Note: Nuance suggestions are gentle context cues to aid empathy across diverse languages and cultures. They never replace actual words.
           </p>
         )}
 
