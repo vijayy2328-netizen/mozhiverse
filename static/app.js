@@ -1,25 +1,23 @@
 /**
- * Mozhiverse - Real-Time Multimodal Communication Engine
- * Supporting Qwen 2.5 Multilingual AI, Continuous Voice Listening,
- * Canonical Turn Sequencing, Interruption Handling, and Streaming TTS.
+ * Mozhiverse - Accessible Live Voice & Caption Bridge Engine
+ * Ultra-simple, single-screen UI controller
  */
 
-// Application State
 const state = {
   clientId: 'user_' + Math.random().toString(36).substring(2, 9),
   roomId: 'live-conference',
   activeLanguage: 'en',
+  activeRole: 'anand', // 'anand' | 'sarah' | 'liam'
   isContinuousListening: false,
   isAudioMuted: false,
   isHighContrast: false,
   captionSize: 24,
   websocket: null,
   recognition: null,
-  outboxQueue: [],
-  currentSpeaker: null
+  outboxQueue: []
 };
 
-// --- Streaming Audio Queue with Interruption Support ---
+// --- Gapless Streaming Audio Player ---
 class StreamingAudioPlayer {
   constructor() {
     this.queue = [];
@@ -50,22 +48,12 @@ class StreamingAudioPlayer {
     const audio = new Audio(nextAudioUri);
     this.currentAudio = audio;
 
-    audio.onended = () => {
-      this.playNext();
-    };
-
-    audio.onerror = (e) => {
-      console.warn("Audio playback chunk error:", e);
-      this.playNext();
-    };
-
-    audio.play().catch((err) => {
-      console.warn("Autoplay was prevented by browser:", err);
-      this.playNext();
-    });
+    audio.onended = () => this.playNext();
+    audio.onerror = () => this.playNext();
+    audio.play().catch(() => this.playNext());
   }
 
-  stopAndCancel(triggerBargeInAlert = false) {
+  stopAndCancel(showBargeInAlert = false) {
     this.queue = [];
     if (this.currentAudio) {
       this.currentAudio.pause();
@@ -77,7 +65,7 @@ class StreamingAudioPlayer {
       window.speechSynthesis.cancel();
     }
 
-    if (triggerBargeInAlert) {
+    if (showBargeInAlert) {
       const alertBadge = document.getElementById('interruptionAlert');
       if (alertBadge) {
         alertBadge.classList.remove('hidden');
@@ -89,7 +77,7 @@ class StreamingAudioPlayer {
 
 const audioPlayer = new StreamingAudioPlayer();
 
-// --- WebSocket Connection & Network Resilience ---
+// --- WebSocket Connection ---
 function initWebSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = `${protocol}//${window.location.host}/ws/room/${state.roomId}/${state.clientId}`;
@@ -98,92 +86,65 @@ function initWebSocket() {
   state.websocket = ws;
 
   ws.onopen = () => {
-    updateConnectionStatus(true);
-    // Register participant
+    // Handshake
     ws.send(JSON.stringify({
       type: 'register',
-      name: 'Local Participant',
+      name: getRoleName(state.activeRole),
       language: state.activeLanguage,
       input_modality: 'both',
-      output_modality: 'both',
-      avatar: 'user'
+      output_modality: 'both'
     }));
 
-    // Flush outbox queue if network recovered
+    // Flush offline messages
     while (state.outboxQueue.length > 0) {
-      const pendingMsg = state.outboxQueue.shift();
-      ws.send(JSON.stringify(pendingMsg));
+      ws.send(JSON.stringify(state.outboxQueue.shift()));
     }
   };
 
   ws.onclose = () => {
-    updateConnectionStatus(false);
     setTimeout(initWebSocket, 2000);
   };
 
   ws.onerror = (err) => {
-    console.error("WebSocket connection error:", err);
-    updateConnectionStatus(false);
+    console.error("WS error:", err);
   };
 
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      handleIncomingMessage(data);
+      handleMessage(data);
     } catch (e) {
-      console.error("Error parsing message payload:", e);
+      console.error("Parse error:", e);
     }
   };
 }
 
-function updateConnectionStatus(isConnected) {
-  const indicator = document.getElementById('connectionStatusIndicator');
-  if (!indicator) return;
-  if (isConnected) {
-    indicator.innerHTML = `
-      <span class="w-2 h-2 rounded-full bg-[#2E7D32]"></span>
-      <span>Connected (Real-time)</span>
-    `;
-    indicator.className = "inline-flex items-center space-x-1.5 text-[#2E7D32] font-medium";
-  } else {
-    indicator.innerHTML = `
-      <span class="w-2 h-2 rounded-full bg-[#C53030]"></span>
-      <span>Reconnecting...</span>
-    `;
-    indicator.className = "inline-flex items-center space-x-1.5 text-[#C53030] font-medium";
-  }
-}
-
-// --- Message Router ---
-function handleIncomingMessage(msg) {
+function handleMessage(msg) {
   const mtype = msg.type;
 
   if (mtype === 'welcome') {
     if (msg.transcript) {
-      msg.transcript.forEach(addTranscriptEntry);
+      msg.transcript.forEach(addTranscriptBubble);
     }
   }
 
   else if (mtype === 'interim_speech') {
-    // Real-time interim speech streaming (partial words as they are spoken)
+    // Real-time live speech hypotheses (shows words as they are being spoken)
     displayCaptions(msg.sender_name || 'Speaker', msg.text, msg.sender_lang, false);
-    highlightParticipantTile(msg.sender_name);
   }
 
   else if (mtype === 'message') {
-    // Finalized statement
+    // Finalized message
     displayCaptions(msg.sender_name || 'Speaker', msg.display_text || msg.original_text, msg.recipient_lang || msg.sender_lang, true);
-    addTranscriptEntry(msg);
-    highlightParticipantTile(msg.sender_name);
+    addTranscriptBubble(msg);
 
-    // If audio is meant to be played
     if (msg.should_play_audio && !state.isAudioMuted && msg.sender_id !== state.clientId) {
-      fetchNeuralTTS(msg.display_text || msg.original_text, msg.recipient_lang);
+      fetchNeuralAudio(msg.display_text || msg.original_text, msg.recipient_lang);
     }
   }
 
   else if (mtype === 'live_audio_chunk') {
-    // Real-time streaming audio chunk: plays immediately without waiting for full sentence
+    // Low-latency streaming clause audio: plays immediately
     if (msg.audio_data && msg.sender_id !== state.clientId) {
       audioPlayer.enqueue(msg.audio_data);
     }
@@ -191,7 +152,6 @@ function handleIncomingMessage(msg) {
   }
 
   else if (mtype === 'cancel_audio') {
-    // Barge-in interruption: cancel obsolete audio
     audioPlayer.stopAndCancel(true);
   }
 }
@@ -203,7 +163,7 @@ function displayCaptions(speakerName, text, lang, isFinal) {
   const langBadge = document.getElementById('speakerLanguageBadge');
   const soundBars = document.getElementById('liveSoundIndicator');
 
-  speakerBadge.textContent = speakerName || 'Live Audio Stream';
+  speakerBadge.textContent = speakerName || 'Live Audio';
   langBadge.textContent = lang ? lang.toUpperCase() : 'LIVE';
 
   if (!isFinal) {
@@ -211,41 +171,35 @@ function displayCaptions(speakerName, text, lang, isFinal) {
     soundBars.classList.remove('hidden');
   } else {
     captionEl.innerHTML = escapeHtml(text);
-    setTimeout(() => {
-      soundBars.classList.add('hidden');
-    }, 1400);
+    setTimeout(() => soundBars.classList.add('hidden'), 1200);
   }
 }
 
-// --- Canonical Transcript Log ---
-function addTranscriptEntry(msg) {
+// --- Transcript Chat Bubble ---
+function addTranscriptBubble(msg) {
   const list = document.getElementById('transcriptList');
   if (!list) return;
 
   const item = document.createElement('div');
-  item.className = "p-3 bg-white rounded-xl border border-[#E8E2D8] space-y-1 shadow-xs transition hover:border-[#D8D0C3]";
+  item.className = "chat-bubble space-y-1 shadow-xs";
 
   const isSelf = msg.sender_id === state.clientId;
-  const senderColor = isSelf ? "text-[#C85A32]" : "text-[#1F1916]";
+  const senderColor = isSelf ? "text-[#C85A32]" : "text-[#1C1815]";
   const timeStr = new Date(msg.timestamp ? msg.timestamp * 1000 : Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const seqLabel = msg.seq_id ? `#${msg.seq_id}` : '#1';
-
-  const displayText = msg.display_text || msg.original_text || msg.text || '';
-  const modality = msg.input_modality === 'speech' ? 'Spoken Voice' : (msg.is_aac ? '1-Click Soundboard' : 'Typed Text');
+  const modality = msg.input_modality === 'speech' ? 'Voice Mic' : (msg.is_aac ? '1-Click Voice' : 'Typed Text');
 
   item.innerHTML = `
     <div class="flex items-center justify-between text-xs">
       <div class="flex items-center space-x-2">
-        <span class="px-1.5 py-0.5 rounded bg-[#F3EFEA] text-[10px] font-bold text-[#5C5249]">${seqLabel}</span>
+        <span class="px-1.5 py-0.5 rounded bg-[#F5EFE8] text-[10px] font-bold text-[#5C5248]">${seqLabel}</span>
         <span class="font-bold ${senderColor}">${escapeHtml(msg.sender_name || (isSelf ? 'You' : 'Speaker'))}</span>
-        <span class="text-[10px] text-[#8C8074]">(${modality})</span>
+        <span class="text-[10px] text-[#8A7E73]">(${modality})</span>
       </div>
-      <div class="text-[11px] text-[#8C8074]">
-        ${timeStr}
-      </div>
+      <div class="text-[10px] text-[#8A7E73]">${timeStr}</div>
     </div>
-    <div class="text-xs text-[#1F1916] font-normal leading-relaxed pl-6">
-      ${escapeHtml(displayText)}
+    <div class="text-xs text-[#1C1815] font-normal leading-relaxed pl-6">
+      ${escapeHtml(msg.display_text || msg.original_text || msg.text || '')}
     </div>
   `;
 
@@ -253,49 +207,27 @@ function addTranscriptEntry(msg) {
   list.scrollTop = list.scrollHeight;
 }
 
-// --- Active Participant Tile Highlighter ---
-function highlightParticipantTile(name) {
-  ['tileAnand', 'tileSarah', 'tileLiam'].forEach(id => {
-    document.getElementById(id)?.classList.remove('active-turn');
-  });
-
-  if (!name) return;
-  const lower = name.toLowerCase();
-  if (lower.includes('anand')) {
-    document.getElementById('tileAnand')?.classList.add('active-turn');
-  } else if (lower.includes('sarah')) {
-    document.getElementById('tileSarah')?.classList.add('active-turn');
-  } else if (lower.includes('liam')) {
-    document.getElementById('tileLiam')?.classList.add('active-turn');
-  }
-}
-
-// --- Single-Click Continuous Microphone Toggle ---
+// --- Continuous Microphone (Single Click, No Holding) ---
 function toggleContinuousMic() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    alert("Speech recognition is supported natively in Google Chrome, Microsoft Edge, and Safari.");
+    alert("Voice speech recognition is supported natively in Chrome, Edge, and Safari.");
     return;
   }
 
-  const micBtn = document.getElementById('continuousMicBtn');
-  const headline = document.getElementById('micStatusHeadline');
-  const pill = document.getElementById('micStatusPill');
+  const btn = document.getElementById('continuousMicBtn');
+  const label = document.getElementById('micButtonText');
 
   if (state.isContinuousListening) {
-    // Stop continuous listening
-    if (state.recognition) {
-      state.recognition.stop();
-    }
+    // Stop
+    if (state.recognition) state.recognition.stop();
     state.isContinuousListening = false;
-    micBtn.classList.remove('is-active');
-    headline.textContent = "Click Circular Button to Talk";
-    pill.textContent = "Single-Click Continuous";
-    pill.className = "text-[11px] px-2 py-0.5 rounded-full bg-[#F3EFEA] text-[#5C5249] font-medium";
+    btn.classList.remove('is-active');
+    label.textContent = "Click to Speak (Live Mic)";
     return;
   }
 
-  // Start continuous listening
+  // Start
   try {
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
@@ -304,10 +236,8 @@ function toggleContinuousMic() {
 
     recognition.onstart = () => {
       state.isContinuousListening = true;
-      micBtn.classList.add('is-active');
-      headline.textContent = "Listening Live (Speak in any language)...";
-      pill.textContent = "Live Active";
-      pill.className = "text-[11px] px-2 py-0.5 rounded-full bg-[#FDF3ED] text-[#C85A32] font-semibold border border-[#F5D3C4]";
+      btn.classList.add('is-active');
+      label.textContent = "Listening Live (Click to Stop)";
     };
 
     recognition.onresult = (event) => {
@@ -323,7 +253,7 @@ function toggleContinuousMic() {
       }
 
       if (interim) {
-        dispatchMessage({
+        dispatch({
           type: 'interim_speech',
           turn_id: 'turn_live',
           text: interim
@@ -331,7 +261,7 @@ function toggleContinuousMic() {
       }
 
       if (finalized) {
-        dispatchMessage({
+        dispatch({
           type: 'message',
           text: finalized,
           input_modality: 'speech'
@@ -339,46 +269,39 @@ function toggleContinuousMic() {
       }
     };
 
-    recognition.onerror = (e) => {
-      console.warn("Speech recognition warning:", e.error);
-    };
+    recognition.onerror = (e) => console.warn("Recognition:", e.error);
 
     recognition.onend = () => {
-      // Auto-restart if user still wants continuous listening
       if (state.isContinuousListening) {
         try { recognition.start(); } catch (err) {}
       } else {
-        micBtn.classList.remove('is-active');
-        headline.textContent = "Click Circular Button to Talk";
-        pill.textContent = "Single-Click Continuous";
-        pill.className = "text-[11px] px-2 py-0.5 rounded-full bg-[#F3EFEA] text-[#5C5249] font-medium";
+        btn.classList.remove('is-active');
+        label.textContent = "Click to Speak (Live Mic)";
       }
     };
 
     recognition.start();
     state.recognition = recognition;
   } catch (err) {
-    console.error("Speech recognition startup error:", err);
+    console.error("Recognition start error:", err);
   }
 }
 
-// --- Outbox Queue & Safe Dispatcher ---
-function dispatchMessage(payload) {
+function dispatch(payload) {
   if (state.websocket && state.websocket.readyState === WebSocket.OPEN) {
     state.websocket.send(JSON.stringify(payload));
   } else {
-    // Save to local outbox queue if network drops
     state.outboxQueue.push(payload);
   }
 }
 
-// --- Direct Text Typing for Non-Verbal Participants ---
+// --- Text-to-Speech Typing ---
 function sendTypedText() {
   const input = document.getElementById('textInputComposer');
   const text = input.value.trim();
   if (!text) return;
 
-  dispatchMessage({
+  dispatch({
     type: 'message',
     text: text,
     input_modality: 'text'
@@ -389,7 +312,7 @@ function sendTypedText() {
 
 // --- 1-Click Assistive Soundboard ---
 function triggerSoundboard(phrase) {
-  dispatchMessage({
+  dispatch({
     type: 'message',
     text: phrase,
     input_modality: 'aac',
@@ -397,8 +320,8 @@ function triggerSoundboard(phrase) {
   });
 }
 
-// --- Neural TTS Synthesis Helper ---
-function fetchNeuralTTS(text, lang) {
+// --- Neural Audio Synthesis ---
+function fetchNeuralAudio(text, lang) {
   fetch('/api/tts/speak', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -406,18 +329,50 @@ function fetchNeuralTTS(text, lang) {
   })
   .then(res => res.json())
   .then(data => {
-    if (data.audio_data) {
-      audioPlayer.enqueue(data.audio_data);
-    }
+    if (data.audio_data) audioPlayer.enqueue(data.audio_data);
   })
   .catch(() => {
-    // Fallback to browser Web Speech API if server TTS is unreachable
     if ('speechSynthesis' in window) {
       const utt = new SpeechSynthesisUtterance(text);
       utt.lang = lang === 'ta' ? 'ta-IN' : 'en-US';
       window.speechSynthesis.speak(utt);
     }
   });
+}
+
+// --- Role Switcher (Anand / Sarah / Liam) ---
+function switchUserRole(role) {
+  state.activeRole = role;
+  ['tabAnand', 'tabSarah', 'tabLiam'].forEach(id => {
+    document.getElementById(id)?.classList.remove('active');
+  });
+
+  const activeTab = role === 'anand' ? 'tabAnand' : (role === 'sarah' ? 'tabSarah' : 'tabLiam');
+  document.getElementById(activeTab)?.classList.add('active');
+
+  const langSelect = document.getElementById('activeLanguageSelect');
+  if (role === 'anand') {
+    state.activeLanguage = 'ta';
+    langSelect.value = 'ta';
+  } else {
+    state.activeLanguage = 'en';
+    langSelect.value = 'en';
+  }
+
+  changeLanguage(state.activeLanguage);
+}
+
+function getRoleName(role) {
+  if (role === 'anand') return 'Anand (Tamil Speaker)';
+  if (role === 'sarah') return 'Sarah (Deaf Captions)';
+  return 'Liam (Non-Verbal AAC)';
+}
+
+function changeLanguage(lang) {
+  state.activeLanguage = lang;
+  if (state.recognition) {
+    state.recognition.lang = lang === 'ta' ? 'ta-IN' : (lang === 'hi' ? 'hi-IN' : 'en-US');
+  }
 }
 
 // --- Auto 3-Way Scenario Demonstration (For Judges) ---
@@ -427,7 +382,7 @@ function runAuto3WayDemo() {
   const scenario = [
     {
       speaker: 'Anand (Tamil Speaker)',
-      roleId: 'tileAnand',
+      role: 'anand',
       text: 'வணக்கம், நாம் இன்றைய கலந்துரையாடலை தொடங்கலாமா?',
       translated: 'Hello, shall we begin today\'s discussion?',
       lang: 'ta',
@@ -437,7 +392,7 @@ function runAuto3WayDemo() {
     },
     {
       speaker: 'Sarah (Deaf Communicator)',
-      roleId: 'tileSarah',
+      role: 'sarah',
       text: 'I can read your Tamil speech clearly on my English captions screen.',
       translated: 'உங்கள் தமிழ் பேச்சை எனது ஆங்கில தலைப்புகளில் தெளிவாக படிக்க முடிகிறது.',
       lang: 'en',
@@ -447,7 +402,7 @@ function runAuto3WayDemo() {
     },
     {
       speaker: 'Liam (Non-Verbal AAC)',
-      roleId: 'tileLiam',
+      role: 'liam',
       text: 'I am typing this via the soundboard, and you are hearing it as spoken voice.',
       translated: 'நான் இதை ஒலி பலகை மூலம் தட்டச்சு செய்கிறேன், அதை நீங்கள் பேசும் குரலாகக் கேட்கிறீர்கள்.',
       lang: 'en',
@@ -456,8 +411,8 @@ function runAuto3WayDemo() {
       modality: 'aac'
     },
     {
-      speaker: 'Anand (Interruption / Barge-in)',
-      roleId: 'tileAnand',
+      speaker: 'Anand (Barge-In Interruption)',
+      role: 'anand',
       text: 'சரியாக சொன்னீர்கள், குறுக்கீடுகள் வந்தாலும் நமது உரையாடல் தடையின்றி நடக்கிறது!',
       translated: 'Exactly right, even when interruptions occur our conversation continues seamlessly!',
       lang: 'ta',
@@ -470,7 +425,7 @@ function runAuto3WayDemo() {
 
   scenario.forEach((step, idx) => {
     setTimeout(() => {
-      highlightParticipantTile(step.speaker);
+      switchUserRole(step.role);
 
       if (step.isBargeIn) {
         audioPlayer.stopAndCancel(true);
@@ -478,9 +433,9 @@ function runAuto3WayDemo() {
 
       displayCaptions(step.speaker, step.translated, step.targetLang, true);
 
-      addTranscriptEntry({
+      addTranscriptBubble({
         seq_id: idx + 1,
-        sender_id: 'demo_' + step.roleId,
+        sender_id: 'demo_' + step.role,
         sender_name: step.speaker,
         original_text: step.text,
         display_text: `${step.text} → [${step.targetLang.toUpperCase()}]: ${step.translated}`,
@@ -488,22 +443,14 @@ function runAuto3WayDemo() {
         timestamp: Date.now() / 1000
       });
 
-      // Play synthesized audio for listeners
-      if (!state.isAudioMuted && step.roleId !== 'tileSarah') {
-        fetchNeuralTTS(step.translated, step.targetLang);
+      if (!state.isAudioMuted && step.role !== 'sarah') {
+        fetchNeuralAudio(step.translated, step.targetLang);
       }
     }, step.delay);
   });
 }
 
-// --- Settings & Accessibility Functions ---
-function changeLanguage(lang) {
-  state.activeLanguage = lang;
-  if (state.recognition) {
-    state.recognition.lang = lang === 'ta' ? 'ta-IN' : (lang === 'hi' ? 'hi-IN' : 'en-US');
-  }
-}
-
+// Accessibility toggles
 function toggleHighContrast() {
   state.isHighContrast = !state.isHighContrast;
   const container = document.getElementById('captionContainer');
@@ -515,7 +462,7 @@ function toggleHighContrast() {
 }
 
 function adjustCaptionSize(delta) {
-  state.captionSize = Math.max(16, Math.min(44, state.captionSize + delta * 3));
+  state.captionSize = Math.max(16, Math.min(42, state.captionSize + delta * 3));
   const captionEl = document.getElementById('liveCaptionText');
   captionEl.style.fontSize = `${state.captionSize}px`;
 }
@@ -541,26 +488,11 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-// Initialize on DOM Ready
 window.addEventListener('DOMContentLoaded', () => {
   initWebSocket();
   lucide.createIcons();
 
-  // Check Multilingual Model Status
-  fetch('/api/qwen/status')
-    .then(r => r.json())
-    .then(status => {
-      const statusText = document.getElementById('modelStatusText');
-      if (statusText) {
-        statusText.textContent = `${status.engine || 'Qwen 2.5'}: Active`;
-      }
-    })
-    .catch(() => {});
-
-  // Enter key support for text input
   document.getElementById('textInputComposer')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      sendTypedText();
-    }
+    if (e.key === 'Enter') sendTypedText();
   });
 });
