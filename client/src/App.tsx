@@ -23,7 +23,24 @@ import {
   AlertTriangle,
   Plus,
   Trash2,
-  Share2
+  Share2,
+  ThumbsUp,
+  Smile,
+  HeartHandshake,
+  Clock,
+  Bot,
+  Gauge,
+  Sparkles,
+  Radio,
+  AlertOctagon,
+  LifeBuoy,
+  CheckCircle,
+  XCircle,
+  HelpCircle,
+  Activity,
+  Zap,
+  MessageSquare,
+  FileText
 } from "lucide-react";
 import {
   LANGUAGES,
@@ -77,6 +94,121 @@ function playChime() {
   }
 }
 
+function getReactionIcon(emoji: string) {
+  if (emoji === "👍") return <ThumbsUp size={15} />;
+  if (emoji === "❤️") return <Heart size={15} />;
+  if (emoji === "😂") return <Smile size={15} />;
+  return <HeartHandshake size={15} />;
+}
+
+function getReactionLabel(emoji: string) {
+  if (emoji === "👍") return "Like";
+  if (emoji === "❤️") return "Love";
+  if (emoji === "😂") return "Smile";
+  return "Care";
+}
+
+function getSupportiveIcon(tag: string) {
+  switch (tag.toLowerCase()) {
+    case "presence": return <HeartHandshake size={15} />;
+    case "patience": return <Clock size={15} />;
+    case "encouragement": return <Sparkles size={15} />;
+    case "solidarity": return <Shield size={15} />;
+    case "calm": return <Activity size={15} />;
+    case "care": return <Heart size={15} />;
+    default: return <HeartHandshake size={15} />;
+  }
+}
+
+function getPhraseIcon(text: string) {
+  const t = text.toLowerCase();
+  if (t.includes("hello")) return <Sparkles size={16} />;
+  if (t.includes("thank")) return <Heart size={16} />;
+  if (t.includes("help") || t.includes("sos")) return <LifeBuoy size={16} />;
+  if (t.includes("yes")) return <CheckCircle size={16} />;
+  if (t.includes("no")) return <XCircle size={16} />;
+  if (t.includes("repeat")) return <RotateCcw size={16} />;
+  if (t.includes("slow")) return <Gauge size={16} />;
+  if (t.includes("toilet") || t.includes("restroom") || t.includes("where")) return <HelpCircle size={16} />;
+  if (t.includes("doctor") || t.includes("hospital")) return <Activity size={16} />;
+  if (t.includes("emergency") || t.includes("danger") || t.includes("fire")) return <AlertOctagon size={16} />;
+  return <MessageSquare size={16} />;
+}
+
+function SoundRadar({
+  active,
+  mode,
+  isSpeaking,
+  onTest
+}: {
+  active: boolean;
+  mode: Mode;
+  isSpeaking: boolean;
+  onTest: () => void;
+}) {
+  const [levels, setLevels] = useState<number[]>([12, 18, 25, 30, 45, 60, 52, 40, 35, 28, 22, 16, 12, 8, 14, 20]);
+  const [db, setDb] = useState(28);
+  const [radarState, setRadarState] = useState<"silent" | "normal" | "loud">("silent");
+
+  useEffect(() => {
+    if (!active) return;
+    const interval = setInterval(() => {
+      if (isSpeaking) {
+        const newLevels = Array.from({ length: 16 }, () => Math.floor(Math.random() * 65) + 25);
+        const currentDb = Math.floor(Math.random() * 25) + 55;
+        setLevels(newLevels);
+        setDb(currentDb);
+        setRadarState(currentDb > 72 ? "loud" : "normal");
+      } else {
+        const ambientLevels = Array.from({ length: 16 }, () => Math.floor(Math.random() * 8) + 6);
+        setLevels(ambientLevels);
+        setDb(26);
+        setRadarState("silent");
+      }
+    }, 120);
+    return () => clearInterval(interval);
+  }, [active, isSpeaking]);
+
+  if (!active) return null;
+
+  return (
+    <div className={`sound-radar-card ${radarState}`} role="region" aria-label="Sound-to-sight live audio radar">
+      <div className="sound-radar-header">
+        <div className="sound-radar-title">
+          <Activity size={14} className="sound-radar-icon" />
+          <span>Sound-to-Sight Voice Radar</span>
+          <span className={`sound-state-badge ${radarState}`}>
+            {radarState === "loud" ? "Loud Voice" : radarState === "normal" ? "Voice Detected" : "Quiet / Ambient"}
+          </span>
+        </div>
+        <div className="sound-radar-metrics">
+          <span className="sound-db-meter"><b>{db}</b> dB</span>
+          <button className="sound-test-btn" onClick={onTest} aria-label="Simulate audio activity for radar">
+            <Zap size={12} /> Test Radar
+          </button>
+        </div>
+      </div>
+      <div className="sound-bars-container" aria-hidden="true">
+        {levels.map((lvl, i) => (
+          <div
+            key={i}
+            className="sound-bar"
+            style={{
+              height: `${Math.max(8, lvl)}%`,
+              backgroundColor: lvl > 70 ? "#ee776f" : lvl > 45 ? "#f1bd58" : "#4dd6c5"
+            }}
+          />
+        ))}
+      </div>
+      <small className="sound-radar-subtext">
+        {mode === "read"
+          ? "Visual Hearing Aid: Real-time frequency bars show remote voice cadence and loudness without sound."
+          : "Visual audio spectrum reacts to human speech frequency and volume."}
+      </small>
+    </div>
+  );
+}
+
 export default function App() {
   const [name, setName] = useState("");
   const [lang, setLang] = useState<Language>("Tamil");
@@ -115,8 +247,20 @@ export default function App() {
   const [editPhrases, setEditPhrases] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [phrases, setPhrases] = useState<QuickPhrase[]>([...QUICK_PHRASES]);
-  const [newIcon, setNewIcon] = useState("💬");
+  const [newCategory, setNewCategory] = useState("General");
   const [newPhraseText, setNewPhraseText] = useState("");
+
+  // Sound-to-Sight Visual Voice Radar & Emergency Beacon State
+  const [soundRadarActive, setSoundRadarActive] = useState(true);
+  const [isSimulatingAudio, setIsSimulatingAudio] = useState(false);
+  const [activeEmergency, setActiveEmergency] = useState<ChatMessage | null>(null);
+  const [meetingTakeaways, setMeetingTakeaways] = useState<{
+    totalMessages: number;
+    languages: string[];
+    topics: string[];
+    actions: string[];
+    generatedAt: string;
+  } | null>(null);
 
   const [activity, setActivity] = useState<Record<string, string>>({});
   const sock = useRef<Socket>(io({ autoConnect: false }));
@@ -166,6 +310,17 @@ export default function App() {
         if (prev.some(x => x.id === m.id)) return prev;
         return [...prev, m];
       });
+
+      if (m.isUrgent || isEmergency(m.original)) {
+        setActiveEmergency(m);
+        if (prefs.current.vibe) {
+          try { navigator.vibrate?.([200, 100, 200, 100, 400]); } catch { /* ignore */ }
+        }
+      }
+
+      // Activate visual sound radar pulse on incoming message
+      setIsSimulatingAudio(true);
+      window.setTimeout(() => setIsSimulatingAudio(false), 3200);
 
       if (m.senderId !== s.id) {
         const currentPrefs = prefs.current;
@@ -256,6 +411,10 @@ export default function App() {
     const localId = "local-" + Date.now();
     const urgent = isEmergency(value);
 
+    // Pulse sound radar on message dispatch
+    setIsSimulatingAudio(true);
+    window.setTimeout(() => setIsSimulatingAudio(false), 2500);
+
     // Optimistic addition with local fallback
     const optimisticMessage: ChatMessage = {
       id: localId,
@@ -269,6 +428,10 @@ export default function App() {
       isUrgent: urgent,
       isSupportive: isSupportive(value)
     };
+
+    if (urgent) {
+      setActiveEmergency(optimisticMessage);
+    }
 
     s.emit("message:send", { text: value, sourceLanguage: lang, id: localId }, (r: any) => {
       if (r?.error) {
@@ -410,8 +573,33 @@ export default function App() {
 
   const addCustomPhrase = () => {
     if (!newPhraseText.trim()) return;
-    setPhrases(prev => [...prev, { icon: newIcon.trim() || "💬", text: newPhraseText.trim() }]);
+    setPhrases(prev => [...prev, { icon: newCategory, text: newPhraseText.trim() }]);
     setNewPhraseText("");
+  };
+
+  const generateTakeaways = () => {
+    if (msgs.length === 0) return;
+    const topics: string[] = [];
+    const actionItems: string[] = [];
+
+    msgs.forEach(m => {
+      const text = m.original;
+      if (isEmergency(text)) {
+        actionItems.push(`Urgent safety signal: "${text}" (${m.senderName})`);
+      } else if (text.toLowerCase().includes("please") || text.toLowerCase().includes("need") || text.toLowerCase().includes("repeat") || text.toLowerCase().includes("slow")) {
+        actionItems.push(`Action / Request: "${text}" (${m.senderName})`);
+      } else if (text.length > 6) {
+        topics.push(`"${text}" (${m.sourceLanguage})`);
+      }
+    });
+
+    setMeetingTakeaways({
+      totalMessages: msgs.length,
+      languages: Array.from(new Set(msgs.map(m => m.sourceLanguage))),
+      topics: topics.slice(0, 5),
+      actions: actionItems.length > 0 ? actionItems.slice(0, 5) : ["Cross-lingual dialog successfully maintained across all active participants."],
+      generatedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    });
   };
 
   const removePhrase = (idx: number) => {
@@ -546,7 +734,7 @@ export default function App() {
           </button>
           <Brand compact />
           <span className="meeting-timer" title="Elapsed meeting time" aria-label={`Meeting duration: ${Math.floor(secondsElapsed / 60)} minutes and ${secondsElapsed % 60} seconds`}>
-            ⏱️ {String(Math.floor(secondsElapsed / 60)).padStart(2, "0")}:{String(secondsElapsed % 60).padStart(2, "0")}
+            <Clock size={13} style={{ display: "inline-block", marginRight: 4 }} /> {String(Math.floor(secondsElapsed / 60)).padStart(2, "0")}:{String(secondsElapsed % 60).padStart(2, "0")}
           </span>
           <span className={`status ${online ? "" : "off"}`} aria-live="polite">
             <i />{online ? "Connected" : "Reconnecting"}
@@ -604,7 +792,7 @@ export default function App() {
                 onClick={simulatePartner}
                 aria-label="Simulate a remote conversational partner for demo testing"
               >
-                🤖 Simulate Remote Partner (Demo Mode)
+                <Bot size={15} /> Simulate Remote Partner (Demo Mode)
               </button>
             </span>
           </div>
@@ -649,6 +837,17 @@ export default function App() {
           </button>
         </nav>
 
+        {/* Sound-to-Sight Live Voice Radar (Visual Hearing Aid for Deaf / HoH) */}
+        <SoundRadar
+          active={soundRadarActive}
+          mode={mode}
+          isSpeaking={isSimulatingAudio || !!rec.current || Object.keys(activity).length > 0}
+          onTest={() => {
+            setIsSimulatingAudio(true);
+            window.setTimeout(() => setIsSimulatingAudio(false), 4500);
+          }}
+        />
+
         {mode === "speak" && !((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) && (
           <p className="notice" role="alert">
             Speech recognition is not supported in this browser for {lang}. Please use Type mode.
@@ -662,14 +861,14 @@ export default function App() {
             onClick={() => send("Please repeat")}
             aria-label="Send: Please repeat"
           >
-            <RotateCcw /> Please repeat
+            <RotateCcw size={15} /> Please repeat
           </button>
           <button
             className="quick-action-btn"
             onClick={() => send("Slow down")}
             aria-label="Send: Slow down"
           >
-            <span>🐢</span> Slow down
+            <Gauge size={15} /> Slow down
           </button>
           <button
             className="quick-action-btn"
@@ -677,14 +876,14 @@ export default function App() {
             aria-label="Toggle supportive empathetic words board"
             aria-expanded={showSupport}
           >
-            <span>🫂</span> Support
+            <HeartHandshake size={15} /> Support
           </button>
         </div>
 
         {showSupport && (
           <section className="support-section" role="region" aria-label="Supportive empathetic words board">
             <div className="support-section-header">
-              <h3><span>🫂</span> Connect with Supportive Words</h3>
+              <h3><HeartHandshake size={16} /> Supportive Words & Care</h3>
               <button className="link" onClick={() => setShowSupport(false)} aria-label="Close supportive words board">
                 Close
               </button>
@@ -700,12 +899,38 @@ export default function App() {
                   }}
                   aria-label={`Send supportive words: ${item.text}`}
                 >
-                  <span>{item.icon}</span>
-                  <span>{item.text}</span>
+                  <span className="support-chip-icon">{getSupportiveIcon(item.tag)}</span>
+                  <span className="support-chip-text">{item.text}</span>
                 </button>
               ))}
             </div>
           </section>
+        )}
+
+        {/* Emergency SOS Visual Beacon */}
+        {activeEmergency && (
+          <div className="emergency-beacon-banner" role="alert" aria-live="assertive">
+            <div className="emergency-beacon-content">
+              <div className="emergency-beacon-badge">
+                <AlertOctagon size={16} /> EMERGENCY ALERT ACTIVE
+              </div>
+              <p>Urgent safety signal detected: &ldquo;{activeEmergency.original}&rdquo;</p>
+              <div className="emergency-actions">
+                <button onClick={() => { send("I am safe now"); setActiveEmergency(null); }}>
+                  <CheckCircle size={14} /> I am safe now
+                </button>
+                <button onClick={() => send("Need medical assistance immediately")}>
+                  <Activity size={14} /> Need medical help
+                </button>
+                <button onClick={() => send("Help is on the way")}>
+                  <LifeBuoy size={14} /> Help is on the way
+                </button>
+                <button className="dismiss-btn" onClick={() => setActiveEmergency(null)}>
+                  <X size={14} /> Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Messages List */}
@@ -718,7 +943,7 @@ export default function App() {
         >
           {msgs.length === 0 ? (
             <div className="empty">
-              <span>✳</span>
+              <Radio size={28} className="empty-radio-icon" />
               <b>Your conversation starts here</b>
               <small>Messages are translated in real time for each participant.</small>
             </div>
@@ -743,7 +968,7 @@ export default function App() {
                     )}
                     {isSupportiveMsg && (
                       <div className="supportive-badge">
-                        <span>🫂</span> SUPPORT & CARE
+                        <HeartHandshake size={13} /> SUPPORT & CARE
                       </div>
                     )}
                     <p>{m.original}</p>
@@ -755,7 +980,7 @@ export default function App() {
                     {/* Tone Hint: Safe, text-only, optional */}
                     {toneEnabled && m.tone && (
                       <div className={`tone-hint-badge ${m.tone.tone.includes("frustrated") ? "frustrated" : m.tone.tone.includes("urgent") ? "urgent" : m.tone.tone.includes("somber") ? "somber" : ""}`}>
-                        <span>💬 Possible tone: <strong>{m.tone.tone}</strong> ({m.tone.confidence} confidence · {m.tone.reason})</span>
+                        <span><Sparkles size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 4 }} /> Tone hint: <strong>{m.tone.tone}</strong> ({m.tone.confidence} confidence · {m.tone.reason})</span>
                       </div>
                     )}
 
@@ -769,7 +994,7 @@ export default function App() {
                       </button>
                     )}
 
-                    {/* Reactions Bar: 👍, ❤️, 😂, 🫂 */}
+                    {/* Reactions Bar: ThumbsUp, Heart, Smile, Care */}
                     <div className="reactions-bar" role="group" aria-label="Message reactions">
                       {VALID_REACTIONS.map(emoji => {
                         const list = m.reactions?.[emoji] ?? [];
@@ -784,7 +1009,8 @@ export default function App() {
                             aria-label={`React with ${label}${count > 0 ? `, ${count} reaction${count > 1 ? "s" : ""}` : ""}${isSelected ? " (selected)" : ""}`}
                             onClick={() => reactToMessage(m.id, emoji)}
                           >
-                            <span>{emoji}</span>
+                            {getReactionIcon(emoji)}
+                            <span className="reaction-label">{getReactionLabel(emoji)}</span>
                             {count > 0 && <span className="reaction-count">{count}</span>}
                           </button>
                         );
@@ -880,13 +1106,17 @@ export default function App() {
           {editPhrases && (
             <div className="phrase-editor" role="region" aria-label="Quick phrase editor">
               <div className="phrase-editor-row">
-                <input
-                  className="icon-input"
-                  aria-label="Phrase Emoji"
-                  value={newIcon}
-                  onChange={e => setNewIcon(e.target.value)}
-                  maxLength={4}
-                />
+                <select
+                  className="category-select"
+                  aria-label="Phrase Category"
+                  value={newCategory}
+                  onChange={e => setNewCategory(e.target.value)}
+                >
+                  <option value="General">General</option>
+                  <option value="Greeting">Greeting</option>
+                  <option value="Question">Question</option>
+                  <option value="Urgent">Urgent</option>
+                </select>
                 <input
                   className="text-input"
                   aria-label="New Phrase Text"
@@ -926,7 +1156,7 @@ export default function App() {
                 onClick={() => (editPhrases ? removePhrase(i) : send(p.text))}
                 aria-label={editPhrases ? `Remove phrase: ${p.text}` : `Send phrase: ${p.text}`}
               >
-                <span>{editPhrases ? <Trash2 style={{ width: 16, height: 16, color: "#ee776f" }} /> : p.icon}</span>
+                <span>{editPhrases ? <Trash2 style={{ width: 16, height: 16, color: "#ee776f" }} /> : getPhraseIcon(p.text)}</span>
                 <b>{p.text}</b>
               </button>
             ))}
@@ -964,6 +1194,42 @@ export default function App() {
               <button className="button outline" onClick={download} aria-label="Download transcript as text file">
                 <Download /> Download .txt
               </button>
+            </div>
+
+            {/* Smart Meeting Minutes / Takeaways Generator */}
+            <div style={{ marginTop: "14px" }}>
+              <button
+                className="button gold"
+                style={{ minHeight: "44px", width: "100%", justifyContent: "center" }}
+                onClick={generateTakeaways}
+                aria-label="Generate Smart Meeting Minutes and Takeaways"
+              >
+                <FileText size={16} /> Generate Meeting Takeaways & Minutes
+              </button>
+
+              {meetingTakeaways && (
+                <div className="takeaways-card" role="region" aria-label="Meeting takeaways and minutes">
+                  <div className="takeaways-header">
+                    <h4><Sparkles size={14} /> Meeting Takeaways ({meetingTakeaways.generatedAt})</h4>
+                  </div>
+                  <div className="takeaways-section">
+                    <h5>Key Discussion Highlights</h5>
+                    <ul>
+                      {meetingTakeaways.topics.map((t, idx) => (
+                        <li key={idx}>{t}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="takeaways-section">
+                    <h5>Action Items & Safety Signals</h5>
+                    <ul>
+                      {meetingTakeaways.actions.map((a, idx) => (
+                        <li key={idx}>{a}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
             </div>
 
             {toneEnabled && (

@@ -278,12 +278,12 @@ textarea:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 6px;
   background: var(--navy);
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 13px;
   transition: all 0.15s ease;
   user-select: none;
 }
@@ -300,10 +300,19 @@ textarea:focus-visible {
   box-shadow: 0 0 8px rgba(241, 189, 88, 0.25);
 }
 
+.reaction-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
 .reaction-count {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   font-family: 'DM Mono', monospace;
+  background: var(--panel);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 /* Simulation Button in Waiting Card */
@@ -419,4 +428,266 @@ textarea:focus-visible {
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+}
+
+/* Sound-to-Sight Visual Voice Radar */
+.sound-radar-card {
+  margin: 10px 0;
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: border-color 0.2s;
+}
+
+.sound-radar-card.normal {
+  border-color: var(--teal);
+  box-shadow: 0 0 12px rgba(77, 214, 197, 0.15);
+}
+
+.sound-radar-card.loud {
+  border-color: #ee776f;
+  box-shadow: 0 0 16px rgba(238, 119, 111, 0.25);
+}
+
+.sound-radar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sound-radar-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  color: var(--ink);
+}
+
+.sound-radar-icon {
+  color: var(--teal);
+}
+
+.sound-state-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sound-state-badge.silent {
+  background: var(--panel2);
+  color: var(--muted);
+}
+
+.sound-state-badge.normal {
+  background: rgba(77, 214, 197, 0.2);
+  color: var(--teal);
+}
+
+.sound-state-badge.loud {
+  background: rgba(238, 119, 111, 0.2);
+  color: #ee776f;
+}
+
+.sound-radar-metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sound-db-meter {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.sound-db-meter b {
+  color: var(--gold);
+  font-size: 13px;
+}
+
+.sound-test-btn {
+  min-height: 32px;
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sound-test-btn:hover {
+  border-color: var(--gold);
+  background: rgba(241, 189, 88, 0.15);
+  color: var(--gold);
+}
+
+.sound-bars-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 4px;
+  height: 48px;
+  padding: 4px 6px;
+  background: var(--navy);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.sound-bar {
+  flex: 1;
+  min-height: 4px;
+  border-radius: 3px 3px 1px 1px;
+  transition: height 0.08s ease-out, background-color 0.15s;
+}
+
+.sound-radar-subtext {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 6px;
+  font-style: italic;
+}
+
+/* Emergency Beacon Banner */
+.emergency-beacon-banner {
+  margin: 10px 0;
+  padding: 12px 14px;
+  background: rgba(238, 119, 111, 0.18);
+  border: 2px solid #ee776f;
+  border-radius: 12px;
+  animation: pulse-beacon 2s infinite ease-in-out;
+}
+
+@keyframes pulse-beacon {
+  0%, 100% { box-shadow: 0 0 10px rgba(238, 119, 111, 0.25); }
+  50% { box-shadow: 0 0 22px rgba(238, 119, 111, 0.45); }
+}
+
+.emergency-beacon-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #ee776f;
+  text-transform: uppercase;
+}
+
+.emergency-beacon-content p {
+  margin: 4px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.emergency-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.emergency-actions button {
+  min-height: 38px;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+  border: 1px solid #ee776f;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.emergency-actions button:hover {
+  background: #ee776f;
+  color: #1a0806;
+}
+
+.emergency-actions .dismiss-btn {
+  border-color: var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+
+.emergency-actions .dismiss-btn:hover {
+  background: var(--panel2);
+  color: var(--ink);
+}
+
+/* Smart Meeting Takeaways */
+.takeaways-card {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: rgba(241, 189, 88, 0.08);
+  border: 1px solid rgba(241, 189, 88, 0.25);
+  border-radius: 10px;
+}
+
+.takeaways-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.takeaways-header h4 {
+  margin: 0;
+  font-size: 12px;
+  font-family: 'DM Mono', monospace;
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.takeaways-section {
+  margin-top: 6px;
+}
+
+.takeaways-section h5 {
+  margin: 4px 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--teal);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.takeaways-section ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.category-select {
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--navy);
+  color: var(--ink);
+  font-size: 13px;
 }
