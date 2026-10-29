@@ -351,13 +351,32 @@ function switchUserRole(role) {
   document.getElementById(activeTab)?.classList.add('active');
 
   const langSelect = document.getElementById('activeLanguageSelect');
+  const micLabel = document.getElementById('micButtonText');
+
   if (role === 'anand') {
     state.activeLanguage = 'ta';
-    langSelect.value = 'ta';
+    if (langSelect) langSelect.value = 'ta';
+    if (micLabel) micLabel.textContent = "Click to Speak (Tamil Voice)";
+  } else if (role === 'sarah') {
+    state.activeLanguage = 'en';
+    if (langSelect) langSelect.value = 'en';
+    if (micLabel) micLabel.textContent = "Click to Speak (Live Mic)";
   } else {
     state.activeLanguage = 'en';
-    langSelect.value = 'en';
+    if (langSelect) langSelect.value = 'en';
+    if (micLabel) micLabel.textContent = "Click to Speak (English Voice)";
   }
+
+  // Update profile on the server
+  dispatch({
+    type: 'update_profile',
+    updates: {
+      name: getRoleName(role),
+      language: state.activeLanguage,
+      input_modality: role === 'anand' ? 'speech' : (role === 'liam' ? 'text' : 'both'),
+      output_modality: role === 'sarah' ? 'captions' : 'audio'
+    }
+  });
 
   changeLanguage(state.activeLanguage);
 }
@@ -491,6 +510,13 @@ function escapeHtml(str) {
 window.addEventListener('DOMContentLoaded', () => {
   initWebSocket();
   lucide.createIcons();
+
+  // Check URL params for role (e.g. ?role=anand, ?role=sarah, ?role=liam)
+  const urlParams = new URLSearchParams(window.location.search);
+  const roleParam = urlParams.get('role');
+  if (roleParam && ['anand', 'sarah', 'liam'].includes(roleParam.toLowerCase())) {
+    setTimeout(() => switchUserRole(roleParam.toLowerCase()), 350);
+  }
 
   document.getElementById('textInputComposer')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendTypedText();
