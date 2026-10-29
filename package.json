@@ -1,0 +1,16 @@
+{
+  "name": "mozhiverse",
+  "private": true,
+  "workspaces": ["client", "server", "shared"],
+  "scripts": {
+    "dev": "npm run build:shared && concurrently -k \"npm:dev:server\" \"npm:dev:client\"",
+    "build:shared": "npm --workspace shared run build",
+    "dev:server": "npm --workspace server run dev",
+    "dev:client": "npm --workspace client run dev",
+    "build": "npm --workspace shared run build && npm --workspace server run build && npm --workspace client run build",
+    "start": "npm --workspace server run start",
+    "test": "npm --workspace server run test",
+    "test:socket": "npm run build && node scripts/socket-smoke-test.mjs"
+  },
+  "devDependencies": {"concurrently":"^9.1.2","typescript":"^5.7.3"}
+}

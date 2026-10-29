@@ -1,0 +1,422 @@
+.my-language {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.my-language select {
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.activity {
+  display: block;
+  margin: 6px 0;
+  color: var(--teal);
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* Quick Action Bar for 'Please repeat' & 'Slow down' */
+.quick-action-bar {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.quick-action-btn {
+  flex: 1;
+  min-height: 44px;
+  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.quick-action-btn:hover {
+  background: var(--panel2);
+  border-color: var(--gold);
+}
+
+.quick-action-btn:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+/* Urgent Message Visual Cue */
+.bubble.urgent {
+  border: 2px solid #ee776f !important;
+  background: rgba(238, 119, 111, 0.14) !important;
+  box-shadow: 0 0 16px rgba(238, 119, 111, 0.25);
+}
+
+.urgent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  background: #ee776f;
+  color: #1a0806;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Tone Hint Badge */
+.tone-hint-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(77, 214, 197, 0.12);
+  border: 1px solid rgba(77, 214, 197, 0.3);
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.tone-hint-badge.frustrated {
+  background: rgba(241, 169, 118, 0.15);
+  border-color: rgba(241, 169, 118, 0.35);
+  color: #f1a976;
+}
+
+.tone-hint-badge.urgent {
+  background: rgba(238, 119, 111, 0.15);
+  border-color: rgba(238, 119, 111, 0.35);
+  color: #ee776f;
+}
+
+.tone-hint-badge.somber {
+  background: rgba(160, 175, 200, 0.15);
+  border-color: rgba(160, 175, 200, 0.3);
+  color: #c0cad8;
+}
+
+.tone-hint-badge small {
+  opacity: 0.85;
+  font-size: 10px;
+}
+
+.tone-disclaimer {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 3px;
+  font-style: italic;
+}
+
+/* Phrase Editing Modal & Controls */
+.phrase-editor {
+  margin-top: 10px;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.phrase-editor-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.phrase-editor-row input {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--navy);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.phrase-editor-row input.icon-input {
+  width: 52px;
+  text-align: center;
+  font-size: 18px;
+}
+
+.phrase-editor-row input.text-input {
+  flex: 1;
+}
+
+.phrase-editor-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* Conversation Summary Box */
+.summary-card {
+  padding: 12px 14px;
+  margin-top: 10px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.summary-card h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-family: 'DM Mono', monospace;
+  color: var(--gold);
+}
+
+.summary-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: var(--muted);
+}
+
+.summary-stats b {
+  color: var(--ink);
+}
+
+/* Accessibility Touch Targets & Focus States */
+button, input, select, textarea {
+  touch-action: manipulation;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--teal) !important;
+  outline-offset: 2px !important;
+}
+
+/* Deaf / Read Mode Typography Enhancements */
+.captions .message {
+  max-width: 100% !important;
+  margin: 12px 0 20px !important;
+}
+
+.captions .bubble {
+  padding: 18px 20px !important;
+  border-width: 2px !important;
+}
+
+.captions .bubble p {
+  font-size: 1.35em !important;
+  font-weight: 500 !important;
+  line-height: 1.6 !important;
+}
+
+.captions .bubble .translated {
+  font-size: 1.45em !important;
+  font-weight: 600 !important;
+  color: var(--gold) !important;
+}
+
+/* High Contrast Mode Enhancements */
+.contrast {
+  --line: #a0b2c6 !important;
+}
+
+.contrast .bubble {
+  border-width: 2px !important;
+}
+
+.contrast button {
+  border-width: 2px !important;
+}
+
+.contrast .message>label {
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+
+/* Dyslexia Mode Font */
+.dyslexia {
+  font-family: 'OpenDyslexic', 'Comic Sans MS', Arial, sans-serif !important;
+  letter-spacing: 0.04em !important;
+  word-spacing: 0.08em !important;
+  line-height: 1.7 !important;
+}
+
+/* Message Reactions Bar */
+.reactions-bar {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.reaction-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: var(--navy);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 14px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.reaction-btn:hover {
+  background: var(--panel2);
+  border-color: var(--teal);
+}
+
+.reaction-btn.selected {
+  background: rgba(241, 189, 88, 0.22);
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 8px rgba(241, 189, 88, 0.25);
+}
+
+.reaction-count {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+}
+
+/* Simulation Button in Waiting Card */
+.sim-partner-btn {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--gold);
+  background: rgba(241, 189, 88, 0.15);
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.sim-partner-btn:hover {
+  background: var(--gold);
+  color: var(--navy);
+}
+
+/* Meeting Session Timer */
+.meeting-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--teal);
+}
+
+/* Empathetic & Supportive Connection Board */
+.support-section {
+  margin: 10px 0;
+  padding: 12px 14px;
+  background: rgba(77, 214, 197, 0.08);
+  border: 1px solid rgba(77, 214, 197, 0.25);
+  border-radius: 12px;
+}
+
+.support-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.support-section-header h3 {
+  margin: 0;
+  font-size: 13px;
+  font-family: 'DM Mono', monospace;
+  color: var(--teal);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.support-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px;
+}
+
+.support-chip {
+  min-height: 44px;
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.support-chip:hover {
+  border-color: var(--teal);
+  background: rgba(77, 214, 197, 0.15);
+}
+
+.support-chip span:first-child {
+  font-size: 16px;
+}
+
+.bubble.supportive {
+  border: 2px solid var(--teal) !important;
+  background: rgba(77, 214, 197, 0.12) !important;
+  box-shadow: 0 0 14px rgba(77, 214, 197, 0.2);
+}
+
+.supportive-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  background: var(--teal);
+  color: var(--navy);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
