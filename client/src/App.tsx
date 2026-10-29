@@ -955,7 +955,9 @@ export default function App() {
         >
           {msgs.length === 0 ? (
             <div className="empty">
-              <Radio size={28} className="empty-radio-icon" />
+              <div className="empty-icon-badge">
+                <Radio size={26} />
+              </div>
               <b>Your conversation starts here</b>
               <small>Messages are translated in real time for each participant.</small>
             </div>
@@ -1008,21 +1010,31 @@ export default function App() {
 
                     {/* Reactions Bar: ThumbsUp, Heart, Smile, Care */}
                     <div className="reactions-bar" role="group" aria-label="Message reactions">
-                      {VALID_REACTIONS.map(emoji => {
-                        const list = m.reactions?.[emoji] ?? [];
+                      {(["like", "love", "smile", "care"] as const).map(type => {
+                        const legacyMap: Record<"like" | "love" | "smile" | "care", ReactionType> = {
+                          like: "👍",
+                          love: "❤️",
+                          smile: "😂",
+                          care: "🫂"
+                        };
+                        const legacyKey = legacyMap[type];
+                        const list = [
+                          ...(m.reactions?.[type] ?? []),
+                          ...(m.reactions?.[legacyKey] ?? [])
+                        ];
                         const count = list.length;
                         const isSelected = list.includes(sock.current.id ?? "");
-                        const label = emoji === "👍" ? "Thumbs Up" : emoji === "❤️" ? "Heart" : emoji === "😂" ? "Laugh" : "Care & Support";
+                        const label = getReactionLabel(type);
                         return (
                           <button
-                            key={emoji}
+                            key={type}
                             className={`reaction-btn ${isSelected ? "selected" : ""}`}
                             aria-pressed={isSelected}
                             aria-label={`React with ${label}${count > 0 ? `, ${count} reaction${count > 1 ? "s" : ""}` : ""}${isSelected ? " (selected)" : ""}`}
-                            onClick={() => reactToMessage(m.id, emoji)}
+                            onClick={() => reactToMessage(m.id, type)}
                           >
-                            {getReactionIcon(emoji)}
-                            <span className="reaction-label">{getReactionLabel(emoji)}</span>
+                            {getReactionIcon(type)}
+                            <span className="reaction-label">{label}</span>
                             {count > 0 && <span className="reaction-count">{count}</span>}
                           </button>
                         );
@@ -1168,8 +1180,10 @@ export default function App() {
                 onClick={() => (editPhrases ? removePhrase(i) : send(p.text))}
                 aria-label={editPhrases ? `Remove phrase: ${p.text}` : `Send phrase: ${p.text}`}
               >
-                <span>{editPhrases ? <Trash2 style={{ width: 16, height: 16, color: "#ee776f" }} /> : getPhraseIcon(p.text)}</span>
-                <b>{p.text}</b>
+                <span className="phrase-icon-wrapper">
+                  {editPhrases ? <Trash2 style={{ width: 16, height: 16, color: "#ee776f" }} /> : getPhraseIcon(p.text)}
+                </span>
+                <b className="phrase-text">{p.text}</b>
               </button>
             ))}
           </div>

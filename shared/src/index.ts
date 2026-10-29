@@ -23,7 +23,7 @@ export interface ToneHintResult {
   reason: string;
 }
 
-export const VALID_REACTIONS = ["👍", "❤️", "😂", "🫂"] as const;
+export const VALID_REACTIONS = ["like", "love", "smile", "care", "👍", "❤️", "😂", "🫂"] as const;
 export type ReactionType = typeof VALID_REACTIONS[number];
 
 export interface ChatMessage {
@@ -58,12 +58,12 @@ export interface SupportivePhrase {
 }
 
 export const SUPPORTIVE_WORDS: SupportivePhrase[] = [
-  { icon: "🫂", text: "I am here with you", tag: "Presence" },
-  { icon: "💙", text: "Take your time, no rush", tag: "Patience" },
-  { icon: "✨", text: "You are doing great, keep going", tag: "Encouragement" },
-  { icon: "🤝", text: "We will solve this together", tag: "Solidarity" },
-  { icon: "🧘", text: "Take a deep breath, it will be okay", tag: "Calm" },
-  { icon: "🌻", text: "Sending you warmth and positive energy", tag: "Care" }
+  { icon: "presence", text: "I am here with you", tag: "Presence" },
+  { icon: "patience", text: "Take your time, no rush", tag: "Patience" },
+  { icon: "encouragement", text: "You are doing great, keep going", tag: "Encouragement" },
+  { icon: "solidarity", text: "We will solve this together", tag: "Solidarity" },
+  { icon: "calm", text: "Take a deep breath, it will be okay", tag: "Calm" },
+  { icon: "care", text: "Sending you warmth and positive energy", tag: "Care" }
 ];
 
 export function isSupportive(text: string): boolean {
@@ -86,16 +86,16 @@ export function isSupportive(text: string): boolean {
 }
 
 export const QUICK_PHRASES: QuickPhrase[] = [
-  { icon: "👋", text: "Hello" },
-  { icon: "🙏", text: "Thank you" },
-  { icon: "🆘", text: "Help" },
-  { icon: "✅", text: "Yes" },
-  { icon: "❌", text: "No" },
-  { icon: "🔁", text: "Please repeat" },
-  { icon: "🐢", text: "Slow down" },
-  { icon: "🚻", text: "Where is the toilet" },
-  { icon: "🩺", text: "I need a doctor" },
-  { icon: "🚨", text: "Emergency" }
+  { icon: "greeting", text: "Hello" },
+  { icon: "gratitude", text: "Thank you" },
+  { icon: "help", text: "Help" },
+  { icon: "yes", text: "Yes" },
+  { icon: "no", text: "No" },
+  { icon: "repeat", text: "Please repeat" },
+  { icon: "speed", text: "Slow down" },
+  { icon: "location", text: "Where is the toilet" },
+  { icon: "medical", text: "I need a doctor" },
+  { icon: "urgent", text: "Emergency" }
 ];
 
 export const EMERGENCY_PHRASES = [

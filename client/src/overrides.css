@@ -1,3 +1,347 @@
+/* ========================================================
+   MODERN UI REDESIGN - 100% EMOJI-FREE & ACCESSIBLE
+   ======================================================== */
+
+:root {
+  --navy: #0c1421 !important;
+  --panel: #132034 !important;
+  --panel2: #1a2c47 !important;
+  --ink: #f8fafc !important;
+  --muted: #94a3b8 !important;
+  --gold: #f59e0b !important;
+  --teal: #14b8a6 !important;
+  --line: rgba(255, 255, 255, 0.09) !important;
+  --line-strong: rgba(255, 255, 255, 0.16) !important;
+}
+
+body {
+  background: radial-gradient(circle at 50% 0%, #17273f 0%, #0c1421 75%) !important;
+  color: var(--ink) !important;
+}
+
+.shell {
+  max-width: 680px !important;
+}
+
+/* Header Redesign */
+.roomtop {
+  border-bottom: 1px solid var(--line) !important;
+  backdrop-filter: blur(12px);
+  padding: 0 4px !important;
+}
+
+.roomhead {
+  padding: 14px 0 10px !important;
+  border-bottom: 1px solid var(--line) !important;
+}
+
+.roomhead .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px !important;
+  letter-spacing: 0.5px !important;
+}
+
+.roomhead .eyebrow b {
+  color: var(--gold) !important;
+  font-family: 'DM Mono', monospace !important;
+  background: rgba(245, 158, 11, 0.12) !important;
+  padding: 2px 8px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+.peers {
+  margin-top: 6px !important;
+}
+
+.peers span {
+  background: var(--panel) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--ink) !important;
+  padding: 4px 10px !important;
+  border-radius: 20px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+.my-language {
+  margin-top: 8px !important;
+  font-size: 12px !important;
+}
+
+.my-language select {
+  min-height: 40px !important;
+  padding: 4px 10px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--line) !important;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  font-weight: 500 !important;
+}
+
+/* Waiting / Connect Partner Card */
+.waiting {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(19, 32, 52, 0.7) 100%) !important;
+  border: 1px solid rgba(20, 184, 166, 0.3) !important;
+  border-radius: 16px !important;
+  padding: 16px 18px !important;
+  margin-top: 12px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+}
+
+.waiting b {
+  font-size: 14px !important;
+  color: var(--ink) !important;
+}
+
+.waiting small {
+  color: var(--muted) !important;
+  font-size: 12px !important;
+}
+
+.sim-partner-btn {
+  margin-top: 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 44px !important;
+  padding: 8px 18px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--gold) !important;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.08) 100%) !important;
+  color: var(--gold) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.sim-partner-btn:hover {
+  background: var(--gold) !important;
+  color: #0c1421 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35) !important;
+}
+
+/* Mode Switcher Segmented Bar */
+.modes {
+  display: flex !important;
+  gap: 6px !important;
+  padding: 12px 0 10px !important;
+  background: transparent !important;
+}
+
+.modes button {
+  flex: 1 !important;
+  min-height: 46px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--line) !important;
+  background: var(--panel) !important;
+  color: var(--muted) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  transition: all 0.18s ease !important;
+}
+
+.modes button:hover {
+  background: var(--panel2) !important;
+  color: var(--ink) !important;
+  border-color: var(--line-strong) !important;
+}
+
+.modes button.active {
+  background: var(--gold) !important;
+  color: #0c1421 !important;
+  border-color: var(--gold) !important;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25) !important;
+  font-weight: 700 !important;
+}
+
+/* Quick Action Bar */
+.quick-action-bar {
+  display: flex !important;
+  gap: 8px !important;
+  margin: 10px 0 !important;
+}
+
+.quick-action-btn {
+  flex: 1 !important;
+  min-height: 44px !important;
+  padding: 8px 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--line) !important;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  transition: all 0.15s ease !important;
+}
+
+.quick-action-btn:hover {
+  background: var(--panel2) !important;
+  border-color: var(--teal) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Empty Conversation State */
+.empty {
+  min-height: 160px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  gap: 8px !important;
+  padding: 24px !important;
+}
+
+.empty-icon-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: rgba(20, 184, 166, 0.12);
+  color: var(--teal);
+  border: 1px solid rgba(20, 184, 166, 0.25);
+  margin-bottom: 4px;
+}
+
+.empty b {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--ink) !important;
+}
+
+.empty small {
+  color: var(--muted) !important;
+  font-size: 12px !important;
+  max-width: 320px;
+}
+
+/* Modern Composer */
+.composer {
+  padding: 12px 0 8px !important;
+  border-top: 1px solid var(--line) !important;
+}
+
+.inputrow {
+  display: flex !important;
+  align-items: flex-end !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  background: var(--panel) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.inputrow:focus-within {
+  border-color: var(--teal) !important;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2) !important;
+}
+
+.inputrow textarea {
+  flex: 1 !important;
+  min-height: 48px !important;
+  max-height: 120px !important;
+  padding: 6px 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--ink) !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  resize: vertical !important;
+}
+
+.send {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  background: var(--gold) !important;
+  color: #0c1421 !important;
+  border: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  transition: all 0.15s ease !important;
+}
+
+.send:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+}
+
+.send:disabled {
+  background: var(--panel2) !important;
+  color: var(--muted) !important;
+  opacity: 0.5 !important;
+}
+
+/* Quick Phrases Grid - 100% EMOJI-FREE */
+.phrases {
+  padding: 14px 0 16px !important;
+}
+
+.sectiontitle h2 {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.8px !important;
+  color: var(--muted) !important;
+  text-transform: uppercase !important;
+}
+
+.phrasegrid {
+  display: grid !important;
+  grid-template-columns: repeat(5, 1fr) !important;
+  gap: 8px !important;
+  margin-top: 10px !important;
+}
+
+.phrase {
+  min-height: 64px !important;
+  padding: 10px 6px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  background: var(--panel) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 12px !important;
+  color: var(--ink) !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+.phrase:hover {
+  background: var(--panel2) !important;
+  border-color: var(--teal) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.phrase-icon-wrapper {
+  color: var(--teal) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.phrase-text {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  text-align: center !important;
+  color: var(--ink) !important;
+}
+
 .my-language {
   display: flex;
   align-items: center;
