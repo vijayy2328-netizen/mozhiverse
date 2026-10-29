@@ -237,7 +237,16 @@ function toggleContinuousMic() {
     recognition.onstart = () => {
       state.isContinuousListening = true;
       btn.classList.add('is-active');
-      label.textContent = "Listening Live (Click to Stop)";
+      const langName = state.activeLanguage === 'ta' ? 'Tamil' : (state.activeLanguage === 'hi' ? 'Hindi' : 'English');
+      label.textContent = `Listening in ${langName} (Click to Stop)`;
+      displayCaptions(getRoleName(state.activeRole), "Microphone active. Speak now, listening live...", state.activeLanguage, false);
+    };
+
+    let speechSilenceTimer = null;
+    let latestInterim = '';
+
+    recognition.onspeechstart = () => {
+      document.getElementById('liveSoundIndicator')?.classList.remove('hidden');
     };
 
     recognition.onresult = (event) => {
@@ -253,14 +262,37 @@ function toggleContinuousMic() {
       }
 
       if (interim) {
+        latestInterim = interim;
+        // Instant 0ms local display of words as they are being spoken
+        displayCaptions(getRoleName(state.activeRole), interim, state.activeLanguage, false);
+
+        // Stream to other participants
         dispatch({
           type: 'interim_speech',
           turn_id: 'turn_live',
           text: interim
         });
+
+        // Fast pause auto-commit: If user stops talking for 1 second, commit turn immediately without waiting for browser lag
+        if (speechSilenceTimer) clearTimeout(speechSilenceTimer);
+        speechSilenceTimer = setTimeout(() => {
+          if (latestInterim && latestInterim.trim().length > 1) {
+            const textToCommit = latestInterim.trim();
+            latestInterim = '';
+            displayCaptions(getRoleName(state.activeRole), textToCommit, state.activeLanguage, true);
+            dispatch({
+              type: 'message',
+              text: textToCommit,
+              input_modality: 'speech'
+            });
+          }
+        }, 1100);
       }
 
       if (finalized) {
+        if (speechSilenceTimer) clearTimeout(speechSilenceTimer);
+        latestInterim = '';
+        displayCaptions(getRoleName(state.activeRole), finalized, state.activeLanguage, true);
         dispatch({
           type: 'message',
           text: finalized,
@@ -389,9 +421,34 @@ function getRoleName(role) {
 
 function changeLanguage(lang) {
   state.activeLanguage = lang;
+  const langTag = lang === 'ta' ? 'ta-IN' : (lang === 'hi' ? 'hi-IN' : (lang === 'es' ? 'es-ES' : (lang === 'fr' ? 'fr-FR' : 'en-US')));
   if (state.recognition) {
-    state.recognition.lang = lang === 'ta' ? 'ta-IN' : (lang === 'hi' ? 'hi-IN' : 'en-US');
+    state.recognition.lang = langTag;
+    if (state.isContinuousListening) {
+      try {
+        state.recognition.stop();
+        setTimeout(() => {
+          if (state.isContinuousListening) {
+            try { state.recognition.start(); } catch (err) {}
+          }
+        }, 120);
+      } catch (e) {}
+    }
   }
+
+  const micLabel = document.getElementById('micButtonText');
+  if (micLabel && state.isContinuousListening) {
+    const langName = lang === 'ta' ? 'Tamil' : (lang === 'hi' ? 'Hindi' : 'English');
+    micLabel.textContent = `Listening in ${langName} (Click to Stop)`;
+  }
+
+  // Update profile on server
+  dispatch({
+    type: 'update_profile',
+    updates: {
+      language: lang
+    }
+  });
 }
 
 // --- Auto 3-Way Scenario Demonstration (For Judges) ---
