@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mozhiverse - Universal Assistive Communication & Real-Time Voice Bridge</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Vector Icons (Zero GIFs) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+
+  <!-- Enterprise Navigation Bar -->
+  <header class="bg-slate-900 border-b border-slate-800 px-5 py-3 sticky top-0 z-50 shadow-md">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Logo & System Designation -->
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
+          <i data-lucide="radio" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-base font-bold tracking-tight text-white">Mozhiverse</span>
+            <span class="text-[11px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800/60 font-semibold uppercase tracking-wider">
+              மொழிverse Live
+            </span>
+          </div>
+          <div class="flex items-center space-x-2 text-xs text-slate-400">
+            <span>Session: <strong class="text-slate-300">Mozhiverse-01</strong></span>
+            <span>•</span>
+            <span id="connectionStatusIndicator" class="inline-flex items-center space-x-1.5 text-emerald-400 font-medium">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>Connected (Real-time)</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Persona Switcher for Hackathon Judges & Testing -->
+      <div class="flex items-center bg-slate-950 p-1 rounded-lg border border-slate-800 space-x-1 text-xs">
+        <span class="text-slate-400 px-2 font-medium hidden sm:inline">Active User:</span>
+        <button id="personaBtnAnand" onclick="selectPersona('anand')" class="px-2.5 py-1.5 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-500 transition flex items-center space-x-1.5 shadow-sm">
+          <span>🇮🇳</span>
+          <span>Anand (Tamil Voice)</span>
+        </button>
+        <button id="personaBtnSarah" onclick="selectPersona('sarah')" class="px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center space-x-1.5">
+          <span>🦻</span>
+          <span>Sarah (Deaf Captions)</span>
+        </button>
+        <button id="personaBtnLiam" onclick="selectPersona('liam')" class="px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center space-x-1.5">
+          <span>🔇</span>
+          <span>Liam (Non-Verbal AAC)</span>
+        </button>
+        <button onclick="runConferenceDemo()" title="Run Automated 3-Participant Live Scenario" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 font-medium transition flex items-center space-x-1.5 ml-1">
+          <i data-lucide="play" class="w-3.5 h-3.5"></i>
+          <span>Auto 3-Way Demo</span>
+        </button>
+      </div>
+
+      <!-- Accessibility Toolbar -->
+      <div class="flex items-center space-x-2">
+        <button id="contrastBtn" onclick="toggleHighContrast()" title="Toggle High-Contrast Accessibility Mode" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition border border-slate-700 text-xs flex items-center space-x-1">
+          <i data-lucide="contrast" class="w-4 h-4"></i>
+          <span class="hidden md:inline">High Contrast</span>
+        </button>
+        <div class="flex items-center bg-slate-800 rounded-lg p-0.5 border border-slate-700">
+          <button onclick="adjustCaptionSize(-1)" title="Decrease Subtitle Size" class="px-2 py-1 text-slate-300 hover:text-white text-xs font-bold">A-</button>
+          <span class="text-[10px] text-slate-400 px-1 font-semibold">CC</span>
+          <button onclick="adjustCaptionSize(1)" title="Increase Subtitle Size" class="px-2 py-1 text-slate-300 hover:text-white text-xs font-bold">A+</button>
+        </div>
+        <button id="audioMuteBtn" onclick="toggleAudioMute()" title="Mute/Unmute Incoming Voice Audio" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition border border-slate-700">
+          <i data-lucide="volume-2" id="muteIcon" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Live Subtitle / Closed Caption Banner (Fixed & Prominent) -->
+  <div id="liveCaptionContainer" class="live-caption-surface px-5 py-3 shadow-md transition-all">
+    <div class="max-w-7xl mx-auto flex items-start space-x-4">
+      <div class="flex-shrink-0 pt-0.5">
+        <span class="px-2 py-1 rounded text-xs font-bold bg-blue-900/60 text-blue-300 border border-blue-700/60 tracking-wider inline-flex items-center space-x-1">
+          <i data-lucide="captions" class="w-3.5 h-3.5"></i>
+          <span>LIVE SUBTITLES</span>
+        </span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center space-x-2 text-xs text-slate-400 mb-1">
+          <span id="ccSpeakerName" class="font-semibold text-slate-200">System Ready</span>
+          <span class="text-slate-600">•</span>
+          <span id="ccLangBadge" class="text-blue-400 font-medium">Mozhiverse Active</span>
+          <span id="ccModalityBadge" class="text-slate-400"></span>
+        </div>
+        <div id="captionText" class="caption-size-normal text-white font-medium transition-all">
+          Ready for real-time accessible communication. Speak in Tamil or English, or type to contribute.
+        </div>
+      </div>
+      <div id="captionEqualizer" class="audio-equalizer flex-shrink-0 opacity-40">
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Conference Workspace -->
+  <main class="max-w-7xl mx-auto w-full flex-1 p-5 flex flex-col space-y-4">
+    
+    <!-- Active Conference Participants Tiles (Grid View) -->
+    <section>
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
+          <i data-lucide="users" class="w-3.5 h-3.5 text-blue-400"></i>
+          <span>Live Conference Participants</span>
+        </h2>
+        <span id="participantCountTag" class="text-xs text-slate-400">3 Participants Online</span>
+      </div>
+
+      <div id="participantsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <!-- Participant 1: Anand -->
+        <div id="tile-anand" class="conference-tile p-3.5 flex flex-col justify-between h-28">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 rounded-full bg-blue-600/30 border border-blue-500/40 flex items-center justify-center font-bold text-blue-300 text-xs">
+                AN
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-white flex items-center space-x-1.5">
+                  <span>Anand</span>
+                  <span id="anandSelfBadge" class="text-[10px] bg-blue-900 text-blue-300 px-1.5 py-0.2 rounded font-normal">You</span>
+                </div>
+                <div class="text-[11px] text-slate-400">Primary: <strong>Tamil (தமிழ்)</strong></div>
+              </div>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 flex items-center space-x-1">
+              <span>🎙️ Voice In</span>
+              <span>•</span>
+              <span>🔊 Audio Out</span>
+            </span>
+          </div>
+          <div class="flex items-center justify-between text-xs pt-2 border-t border-slate-800">
+            <span id="anandStatusText" class="text-slate-400 flex items-center space-x-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+              <span>Listening</span>
+            </span>
+            <div id="anandAudioWave" class="audio-equalizer opacity-30">
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Participant 2: Sarah -->
+        <div id="tile-sarah" class="conference-tile p-3.5 flex flex-col justify-between h-28">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 rounded-full bg-emerald-600/30 border border-emerald-500/40 flex items-center justify-center font-bold text-emerald-300 text-xs">
+                SA
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-white flex items-center space-x-1.5">
+                  <span>Sarah</span>
+                  <span id="sarahSelfBadge" class="hidden text-[10px] bg-blue-900 text-blue-300 px-1.5 py-0.2 rounded font-normal">You</span>
+                </div>
+                <div class="text-[11px] text-slate-400">Hard of Hearing • <strong>English</strong></div>
+              </div>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 flex items-center space-x-1">
+              <span>🦻 Captions Only</span>
+            </span>
+          </div>
+          <div class="flex items-center justify-between text-xs pt-2 border-t border-slate-800">
+            <span id="sarahStatusText" class="text-slate-400 flex items-center space-x-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+              <span>Reading Subtitles</span>
+            </span>
+            <div id="sarahAudioWave" class="audio-equalizer opacity-30">
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Participant 3: Liam -->
+        <div id="tile-liam" class="conference-tile p-3.5 flex flex-col justify-between h-28">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 rounded-full bg-amber-600/30 border border-amber-500/40 flex items-center justify-center font-bold text-amber-300 text-xs">
+                LM
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-white flex items-center space-x-1.5">
+                  <span>Liam</span>
+                  <span id="liamSelfBadge" class="hidden text-[10px] bg-blue-900 text-blue-300 px-1.5 py-0.2 rounded font-normal">You</span>
+                </div>
+                <div class="text-[11px] text-slate-400">Non-Verbal • <strong>English</strong></div>
+              </div>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 flex items-center space-x-1">
+              <span>⌨️ AAC / Text In</span>
+              <span>•</span>
+              <span>🔊 Out</span>
+            </span>
+          </div>
+          <div class="flex items-center justify-between text-xs pt-2 border-t border-slate-800">
+            <span id="liamStatusText" class="text-slate-400 flex items-center space-x-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+              <span>Ready</span>
+            </span>
+            <div id="liamAudioWave" class="audio-equalizer opacity-30">
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Workspace Split: Controls & AAC (Left) vs Real-Time Transcript (Right) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1">
+      
+      <!-- Left Column: AAC Soundboard & User Preferences (Cols 5) -->
+      <div class="lg:col-span-5 flex flex-col space-y-4">
+        
+        <!-- Assistive Communication (AAC) Soundboard -->
+        <div class="enterprise-card rounded-xl p-4 flex flex-col space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-2">
+              <i data-lucide="layout-grid" class="w-4 h-4 text-amber-400"></i>
+              <span>Assistive AAC Soundboard (Non-Verbal / Quick Actions)</span>
+            </h3>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800/60 font-medium">
+              Instant 1-Click
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 leading-normal">
+            Click any action below to automatically broadcast, translate, and speak aloud into participants' preferred languages:
+          </p>
+
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <button onclick="triggerAacPhrase('I agree with this statement', 'நான் இதை ஒப்புக்கொள்கிறேன்')" class="aac-tile p-2.5 rounded-lg text-left flex items-start space-x-2">
+              <span class="text-base">👍</span>
+              <div>
+                <strong class="text-white block font-semibold">I Agree</strong>
+                <span class="text-[10px] text-slate-400">Consent & validation</span>
+              </div>
+            </button>
+
+            <button onclick="triggerAacPhrase('I respectfully disagree', 'நான் மரியாதையுடன் ஏற்கவில்லை')" class="aac-tile p-2.5 rounded-lg text-left flex items-start space-x-2">
+              <span class="text-base">❌</span>
+              <div>
+                <strong class="text-white block font-semibold">I Disagree</strong>
+                <span class="text-[10px] text-slate-400">Alternative view</span>
+              </div>
+            </button>
+
+            <button onclick="triggerAacPhrase('Please wait a moment, I am typing my response', 'தயவுசெய்து காத்திருங்கள், நான் எனது பதிலைத் தட்டச்சு செய்கிறேன்')" class="aac-tile p-2.5 rounded-lg text-left flex items-start space-x-2 border-amber-600/40">
+              <span class="text-base">✋</span>
+              <div>
+                <strong class="text-amber-300 block font-semibold">Hold Floor (Typing)</strong>
+                <span class="text-[10px] text-slate-400">Signals response incoming</span>
+              </div>
+            </button>
+
+            <button onclick="triggerAacPhrase('Could you please repeat that statement?', 'தயவுசெய்து அதை மீண்டும் சொல்ல முடியுமா?')" class="aac-tile p-2.5 rounded-lg text-left flex items-start space-x-2">
+              <span class="text-base">🔄</span>
+              <div>
+                <strong class="text-white block font-semibold">Please Repeat</strong>
+                <span class="text-[10px] text-slate-400">Request clarification</span>
+              </div>
+            </button>
+
+            <button onclick="triggerAacPhrase('I have a question to ask', 'எனக்கு ஒரு கேள்வி உள்ளது')" class="aac-tile p-2.5 rounded-lg text-left flex items-start space-x-2">
+              <span class="text-base">❓</span>
+              <div>
+                <strong class="text-white block font-semibold">I Have a Question</strong>
+                <span class="text-[10px] text-slate-400">Raise query</span>
+              </div>
+            </button>
+
+            <button onclick="triggerAacPhrase('Thank you very much', 'மிக்க நன்றி')" class="aac-tile p-2.5 rounded-lg text-left flex items-start space-x-2">
+              <span class="text-base">🙏</span>
+              <div>
+                <strong class="text-white block font-semibold">Thank You</strong>
+                <span class="text-[10px] text-slate-400">Polite closure</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- User Communication Configuration -->
+        <div class="enterprise-card rounded-xl p-4 flex flex-col space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-2">
+              <i data-lucide="sliders" class="w-4 h-4 text-blue-400"></i>
+              <span>My Communication Settings</span>
+            </h3>
+            <span id="activeRoleLabel" class="text-[10px] px-2 py-0.5 rounded bg-blue-900/60 text-blue-300 border border-blue-700/60">
+              Anand (Tamil Voice)
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="block text-slate-400 mb-1 font-medium">Participant Name</label>
+              <input id="userNameInput" type="text" value="Anand" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-slate-400 mb-1 font-medium">My Language</label>
+              <select id="userLangSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:border-blue-500">
+                <option value="ta" selected>🇮🇳 Tamil (தமிழ்)</option>
+                <option value="en">🇺🇸 English</option>
+                <option value="hi">🇮🇳 Hindi (हिन्दी)</option>
+                <option value="es">🇪🇸 Spanish (Español)</option>
+                <option value="fr">🇫🇷 French (Français)</option>
+                <option value="de">🇩🇪 German (Deutsch)</option>
+                <option value="ja">🇯🇵 Japanese (日本語)</option>
+                <option value="te">🇮🇳 Telugu (తెలుగు)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="block text-slate-400 mb-1 font-medium">Input Channel</label>
+              <select id="userInModality" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:border-blue-500">
+                <option value="speech" selected>🎙️ Voice Microphone</option>
+                <option value="text">⌨️ Typed Text Only</option>
+                <option value="both">🎙️+⌨️ Hybrid (Both)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-slate-400 mb-1 font-medium">Output Channel</label>
+              <select id="userOutModality" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:border-blue-500">
+                <option value="audio" selected>🔊 Spoken Audio (TTS)</option>
+                <option value="captions">🦻 Live Captions Only</option>
+                <option value="both">🔊+🦻 Both Audio & Captions</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
+            <span class="text-slate-400 flex items-center space-x-1.5" title="Interrupting halts previous speaker's audio on other devices">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Active Barge-In (Halt audio on new turn)</span>
+            </span>
+            <input type="checkbox" id="bargeInToggle" checked class="rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0">
+          </div>
+
+          <button onclick="saveProfileChanges()" class="w-full py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-300 hover:text-white border border-slate-700 text-xs font-semibold transition">
+            Apply Configuration
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Live Conference Transcript (Cols 7) -->
+      <div class="lg:col-span-7 flex flex-col space-y-3">
+        
+        <div class="enterprise-card rounded-xl flex-1 flex flex-col overflow-hidden min-h-[460px]">
+          
+          <!-- Transcript Header -->
+          <div class="px-4 py-2.5 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="file-text" class="w-4 h-4 text-blue-400"></i>
+              <span class="text-xs font-bold text-slate-200 uppercase tracking-wider">Synchronized Meeting Record</span>
+              <span id="turnCounter" class="text-xs text-slate-400 bg-slate-800 px-2 py-0.5 rounded">0 turns</span>
+            </div>
+            <div class="flex items-center space-x-2 text-xs">
+              <button onclick="clearTranscript()" class="text-slate-400 hover:text-white px-2 py-1 rounded hover:bg-slate-800 transition">
+                Clear
+              </button>
+              <button onclick="emergencyStopAudio()" title="Immediately stop ongoing speech playback" class="bg-rose-950 text-rose-300 hover:bg-rose-900 px-2.5 py-1 rounded border border-rose-800/60 font-medium transition flex items-center space-x-1">
+                <i data-lucide="square" class="w-3 h-3 fill-current"></i>
+                <span>Stop Audio</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Transcript Scrollable Body -->
+          <div id="transcriptBox" class="flex-1 p-4 overflow-y-auto space-y-3">
+            <div class="p-3 rounded-lg bg-slate-900/70 border border-slate-800 text-xs text-slate-400 flex items-start space-x-2.5">
+              <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5"></i>
+              <div>
+                <strong class="text-slate-200 block font-semibold mb-0.5">Mozhiverse Channel Established</strong>
+                All participant inputs are canonically ordered and translated directly to each participant's selected language and output preference.
+              </div>
+            </div>
+          </div>
+
+          <!-- Interim Speech Banner (Displays live hypothesis before sentence ends) -->
+          <div id="interimSpeechBox" class="hidden px-4 py-2 bg-blue-950/40 border-t border-blue-800/40 flex items-center justify-between text-xs text-blue-200">
+            <div class="flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-blue-400 animate-ping"></span>
+              <span id="interimSpeakerLabel" class="font-semibold text-blue-300">Anand is speaking...</span>
+              <span id="interimTextPreview" class="text-slate-300 italic">"..."</span>
+            </div>
+            <span class="text-[10px] text-blue-400 bg-blue-900/50 px-2 py-0.5 rounded border border-blue-800/50">
+              Live Speech Stream
+            </span>
+          </div>
+
+          <!-- Input Bar -->
+          <div class="p-3 bg-slate-900 border-t border-slate-800 flex flex-col space-y-2">
+            <div class="flex items-center space-x-2">
+              
+              <!-- Voice Microphone Button -->
+              <button id="micToggleBtn" onclick="toggleSpeechRecognition()" class="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center space-x-2 transition shadow-sm flex-shrink-0">
+                <i data-lucide="mic" id="micIcon" class="w-4 h-4"></i>
+                <span id="micBtnText">Speak (Mic)</span>
+              </button>
+
+              <!-- Text Message Input -->
+              <div class="flex-1 relative">
+                <input id="chatTextInput" type="text" placeholder="Type a message (translates and speaks aloud to other participants)..." 
+                  class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 pr-10">
+                <button onclick="submitTextMessage()" class="absolute right-1.5 top-1.5 p-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white transition">
+                  <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+
+              <!-- Floor Control / Hand Raise Button -->
+              <button id="handRaiseBtn" onclick="toggleHandRaise()" title="Raise Hand to Request Floor" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 border border-slate-700 transition flex-shrink-0">
+                <span class="text-base">✋</span>
+              </button>
+            </div>
+
+            <!-- Status hint -->
+            <div class="flex items-center justify-between text-[11px] text-slate-500 px-1">
+              <span>Speech Engine: Web Speech API • Audio Engine: SpeechSynthesis</span>
+              <span>Press Enter to send text • Space to talk</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Notification Toast Container -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <script src="app.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
