@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from translation_engine import translator
 from room_manager import room_manager, ParticipantProfile
 from llama_pipeline import llama_pipeline
+from qwen_pipeline import qwen_pipeline
 from tts_engine import tts_engine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -83,6 +84,10 @@ class TTSRequest(BaseModel):
 @app.get("/api/llama/status")
 async def get_llama_status():
     return llama_pipeline.check_ollama_status()
+
+@app.get("/api/qwen/status")
+async def get_qwen_status():
+    return qwen_pipeline.check_status()
 
 @app.post("/api/tts/speak")
 async def tts_speak(req: TTSRequest):

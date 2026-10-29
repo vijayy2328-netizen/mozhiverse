@@ -1,25 +1,25 @@
 /**
- * Mozhiverse - Accessible Live Caption & Voice Bridge
- * Frontend Engine with Llama AI Pipeline & Low-Latency Streaming TTS
+ * Mozhiverse - Real-Time Multimodal Communication Engine
+ * Supporting Qwen 2.5 Multilingual AI, Continuous Voice Listening,
+ * Canonical Turn Sequencing, Interruption Handling, and Streaming TTS.
  */
 
 // Application State
 const state = {
-  clientId: 'client_' + Math.random().toString(36).substring(2, 9),
-  roomId: 'demo-room',
-  role: 'deaf', // 'deaf' | 'hearing'
-  language: 'en',
-  llamaMode: 'expand', // 'expand' | 'direct'
-  captionSize: 24,
-  isHighContrast: false,
+  clientId: 'user_' + Math.random().toString(36).substring(2, 9),
+  roomId: 'live-conference',
+  activeLanguage: 'en',
+  isContinuousListening: false,
   isAudioMuted: false,
-  isRecording: false,
+  isHighContrast: false,
+  captionSize: 24,
   websocket: null,
   recognition: null,
-  audioQueue: []
+  outboxQueue: [],
+  currentSpeaker: null
 };
 
-// --- Streaming Audio Queue for Gapless Chunk Playback ---
+// --- Streaming Audio Queue with Interruption Support ---
 class StreamingAudioPlayer {
   constructor() {
     this.queue = [];
@@ -55,17 +55,17 @@ class StreamingAudioPlayer {
     };
 
     audio.onerror = (e) => {
-      console.warn("Audio playback error, skipping chunk:", e);
+      console.warn("Audio playback chunk error:", e);
       this.playNext();
     };
 
     audio.play().catch((err) => {
-      console.warn("Browser prevented autoplay:", err);
+      console.warn("Autoplay was prevented by browser:", err);
       this.playNext();
     });
   }
 
-  stopAll() {
+  stopAndCancel(triggerBargeInAlert = false) {
     this.queue = [];
     if (this.currentAudio) {
       this.currentAudio.pause();
@@ -76,12 +76,20 @@ class StreamingAudioPlayer {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
+
+    if (triggerBargeInAlert) {
+      const alertBadge = document.getElementById('interruptionAlert');
+      if (alertBadge) {
+        alertBadge.classList.remove('hidden');
+        setTimeout(() => alertBadge.classList.add('hidden'), 2200);
+      }
+    }
   }
 }
 
 const audioPlayer = new StreamingAudioPlayer();
 
-// --- WebSocket Connection ---
+// --- WebSocket Connection & Network Resilience ---
 function initWebSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = `${protocol}//${window.location.host}/ws/room/${state.roomId}/${state.clientId}`;
@@ -91,15 +99,21 @@ function initWebSocket() {
 
   ws.onopen = () => {
     updateConnectionStatus(true);
-    // Registration handshake
+    // Register participant
     ws.send(JSON.stringify({
       type: 'register',
-      name: state.role === 'deaf' ? 'Deaf Communicator' : 'Speaking Partner',
-      language: state.language,
-      input_modality: state.role === 'deaf' ? 'text' : 'speech',
-      output_modality: state.role === 'deaf' ? 'captions' : 'audio',
+      name: 'Local Participant',
+      language: state.activeLanguage,
+      input_modality: 'both',
+      output_modality: 'both',
       avatar: 'user'
     }));
+
+    // Flush outbox queue if network recovered
+    while (state.outboxQueue.length > 0) {
+      const pendingMsg = state.outboxQueue.shift();
+      ws.send(JSON.stringify(pendingMsg));
+    }
   };
 
   ws.onclose = () => {
@@ -108,7 +122,7 @@ function initWebSocket() {
   };
 
   ws.onerror = (err) => {
-    console.error("WebSocket error:", err);
+    console.error("WebSocket connection error:", err);
     updateConnectionStatus(false);
   };
 
@@ -117,7 +131,7 @@ function initWebSocket() {
       const data = JSON.parse(event.data);
       handleIncomingMessage(data);
     } catch (e) {
-      console.error("Message parse error:", e);
+      console.error("Error parsing message payload:", e);
     }
   };
 }
@@ -128,7 +142,7 @@ function updateConnectionStatus(isConnected) {
   if (isConnected) {
     indicator.innerHTML = `
       <span class="w-2 h-2 rounded-full bg-[#2E7D32]"></span>
-      <span>Connected</span>
+      <span>Connected (Real-time)</span>
     `;
     indicator.className = "inline-flex items-center space-x-1.5 text-[#2E7D32] font-medium";
   } else {
@@ -140,81 +154,56 @@ function updateConnectionStatus(isConnected) {
   }
 }
 
-// --- Incoming Message Dispatcher ---
+// --- Message Router ---
 function handleIncomingMessage(msg) {
   const mtype = msg.type;
 
   if (mtype === 'welcome') {
-    if (msg.participants) {
-      document.getElementById('participantCount').textContent = `${msg.participants.length} participant${msg.participants.length > 1 ? 's' : ''}`;
-    }
     if (msg.transcript) {
-      msg.transcript.forEach(addTranscriptMessage);
-    }
-  }
-
-  else if (mtype === 'participant_joined' || mtype === 'participant_left') {
-    if (msg.participants) {
-      document.getElementById('participantCount').textContent = `${msg.participants.length} participant${msg.participants.length > 1 ? 's' : ''}`;
+      msg.transcript.forEach(addTranscriptEntry);
     }
   }
 
   else if (mtype === 'interim_speech') {
-    // Real-time live captions for Deaf User as speaker is talking
-    displayLiveCaption(msg.sender_name || 'Speaker', msg.text, msg.sender_lang, false);
+    // Real-time interim speech streaming (partial words as they are spoken)
+    displayCaptions(msg.sender_name || 'Speaker', msg.text, msg.sender_lang, false);
+    highlightParticipantTile(msg.sender_name);
   }
 
   else if (mtype === 'message') {
     // Finalized statement
-    displayLiveCaption(msg.sender_name || 'Speaker', msg.display_text || msg.original_text, msg.recipient_lang || msg.sender_lang, true);
-    addTranscriptMessage(msg);
+    displayCaptions(msg.sender_name || 'Speaker', msg.display_text || msg.original_text, msg.recipient_lang || msg.sender_lang, true);
+    addTranscriptEntry(msg);
+    highlightParticipantTile(msg.sender_name);
 
-    // If recipient is listening to audio and not muted
+    // If audio is meant to be played
     if (msg.should_play_audio && !state.isAudioMuted && msg.sender_id !== state.clientId) {
-      speakFallback(msg.display_text || msg.original_text, msg.recipient_lang);
+      fetchNeuralTTS(msg.display_text || msg.original_text, msg.recipient_lang);
     }
-  }
-
-  else if (mtype === 'llama_started') {
-    const feedbackBox = document.getElementById('streamingFeedbackBox');
-    const display = document.getElementById('streamingTokensDisplay');
-    feedbackBox.classList.remove('hidden');
-    display.textContent = '';
-    document.getElementById('streamingStatusLabel').textContent = 'Llama streaming response & synthesizing audio...';
-  }
-
-  else if (mtype === 'llama_token') {
-    const display = document.getElementById('streamingTokensDisplay');
-    display.textContent += msg.token;
-  }
-
-  else if (mtype === 'llama_chunk_sent') {
-    document.getElementById('clauseCounter').textContent = `Clause #${msg.chunk_index}`;
   }
 
   else if (mtype === 'live_audio_chunk') {
-    // Streaming audio chunk delivered to hearing listener
-    // Do NOT wait for full sentence: play audio immediately!
+    // Real-time streaming audio chunk: plays immediately without waiting for full sentence
     if (msg.audio_data && msg.sender_id !== state.clientId) {
       audioPlayer.enqueue(msg.audio_data);
     }
-    displayLiveCaption(msg.sender_name || 'Speaking', msg.text, 'live', false);
+    displayCaptions(msg.sender_name || 'Speaking', msg.text, 'live', false);
   }
 
   else if (mtype === 'cancel_audio') {
-    audioPlayer.stopAll();
+    // Barge-in interruption: cancel obsolete audio
+    audioPlayer.stopAndCancel(true);
   }
 }
 
-// --- Live Caption Display ---
-function displayLiveCaption(speakerName, text, lang, isFinal) {
-  const container = document.getElementById('captionContainer');
+// --- Live Captions Display ---
+function displayCaptions(speakerName, text, lang, isFinal) {
   const captionEl = document.getElementById('liveCaptionText');
   const speakerBadge = document.getElementById('speakerNameText');
   const langBadge = document.getElementById('speakerLanguageBadge');
   const soundBars = document.getElementById('liveSoundIndicator');
 
-  speakerBadge.textContent = speakerName || 'Live Speaker';
+  speakerBadge.textContent = speakerName || 'Live Audio Stream';
   langBadge.textContent = lang ? lang.toUpperCase() : 'LIVE';
 
   if (!isFinal) {
@@ -224,36 +213,38 @@ function displayLiveCaption(speakerName, text, lang, isFinal) {
     captionEl.innerHTML = escapeHtml(text);
     setTimeout(() => {
       soundBars.classList.add('hidden');
-    }, 1200);
+    }, 1400);
   }
 }
 
-// --- Add Item to Conversation Transcript Log ---
-function addTranscriptMessage(msg) {
+// --- Canonical Transcript Log ---
+function addTranscriptEntry(msg) {
   const list = document.getElementById('transcriptList');
   if (!list) return;
 
   const item = document.createElement('div');
-  item.className = "p-3 bg-white rounded-lg border border-[#E5DFD5] space-y-1 shadow-xs";
+  item.className = "p-3 bg-white rounded-xl border border-[#E8E2D8] space-y-1 shadow-xs transition hover:border-[#D8D0C3]";
 
   const isSelf = msg.sender_id === state.clientId;
-  const senderColor = isSelf ? "text-[#C85A32]" : "text-[#231F1C]";
-  const timeStr = new Date(msg.timestamp ? msg.timestamp * 1000 : Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const senderColor = isSelf ? "text-[#C85A32]" : "text-[#1F1916]";
+  const timeStr = new Date(msg.timestamp ? msg.timestamp * 1000 : Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const seqLabel = msg.seq_id ? `#${msg.seq_id}` : '#1';
 
   const displayText = msg.display_text || msg.original_text || msg.text || '';
-  const modalityLabel = msg.input_modality === 'text_llama' || msg.input_modality === 'llama_assisted'
-    ? 'Llama AI Voice'
-    : (msg.input_modality === 'speech' ? 'Speech Mic' : 'Text');
+  const modality = msg.input_modality === 'speech' ? 'Spoken Voice' : (msg.is_aac ? '1-Click Soundboard' : 'Typed Text');
 
   item.innerHTML = `
     <div class="flex items-center justify-between text-xs">
-      <span class="font-bold ${senderColor}">${escapeHtml(msg.sender_name || (isSelf ? 'You' : 'Speaker'))}</span>
-      <div class="flex items-center space-x-1.5 text-[11px] text-[#857A70]">
-        <span class="px-1.5 py-0.2 rounded bg-[#F1ECE3] font-medium text-[#584F47]">${modalityLabel}</span>
-        <span>${timeStr}</span>
+      <div class="flex items-center space-x-2">
+        <span class="px-1.5 py-0.5 rounded bg-[#F3EFEA] text-[10px] font-bold text-[#5C5249]">${seqLabel}</span>
+        <span class="font-bold ${senderColor}">${escapeHtml(msg.sender_name || (isSelf ? 'You' : 'Speaker'))}</span>
+        <span class="text-[10px] text-[#8C8074]">(${modality})</span>
+      </div>
+      <div class="text-[11px] text-[#8C8074]">
+        ${timeStr}
       </div>
     </div>
-    <div class="text-xs text-[#231F1C] font-normal leading-relaxed">
+    <div class="text-xs text-[#1F1916] font-normal leading-relaxed pl-6">
       ${escapeHtml(displayText)}
     </div>
   `;
@@ -262,62 +253,61 @@ function addTranscriptMessage(msg) {
   list.scrollTop = list.scrollHeight;
 }
 
-// --- Send Typed Message Through Llama Pipeline ---
-function dispatchLlamaMessage() {
-  const input = document.getElementById('messageInput');
-  const text = input.value.trim();
-  if (!text) return;
+// --- Active Participant Tile Highlighter ---
+function highlightParticipantTile(name) {
+  ['tileAnand', 'tileSarah', 'tileLiam'].forEach(id => {
+    document.getElementById(id)?.classList.remove('active-turn');
+  });
 
-  if (state.websocket && state.websocket.readyState === WebSocket.OPEN) {
-    state.websocket.send(JSON.stringify({
-      type: 'llama_stream',
-      text: text,
-      mode: state.llamaMode,
-      language: state.language
-    }));
+  if (!name) return;
+  const lower = name.toLowerCase();
+  if (lower.includes('anand')) {
+    document.getElementById('tileAnand')?.classList.add('active-turn');
+  } else if (lower.includes('sarah')) {
+    document.getElementById('tileSarah')?.classList.add('active-turn');
+  } else if (lower.includes('liam')) {
+    document.getElementById('tileLiam')?.classList.add('active-turn');
   }
-
-  input.value = '';
 }
 
-// --- 1-Click Instant Assistive Responses ---
-function sendQuickPhrase(phrase) {
-  const input = document.getElementById('messageInput');
-  input.value = phrase;
-  dispatchLlamaMessage();
-}
-
-// --- Voice Recognition for Hearing Partner (Web Speech API) ---
-function toggleSpeechRecognition() {
+// --- Single-Click Continuous Microphone Toggle ---
+function toggleContinuousMic() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    alert("Speech recognition is supported in Google Chrome, Microsoft Edge, and Safari.");
+    alert("Speech recognition is supported natively in Google Chrome, Microsoft Edge, and Safari.");
     return;
   }
 
-  const micBtn = document.getElementById('micBtn');
-  const micLabel = document.getElementById('micButtonText');
+  const micBtn = document.getElementById('continuousMicBtn');
+  const headline = document.getElementById('micStatusHeadline');
+  const pill = document.getElementById('micStatusPill');
 
-  if (state.isRecording) {
+  if (state.isContinuousListening) {
+    // Stop continuous listening
     if (state.recognition) {
       state.recognition.stop();
     }
-    state.isRecording = false;
-    micBtn.className = "px-3.5 py-2 rounded-xl bg-white hover:bg-[#F1ECE3] text-[#584F47] border border-[#D5CDC0] font-medium text-xs flex items-center space-x-1.5 transition shadow-sm";
-    micLabel.textContent = "Start Voice Mic";
+    state.isContinuousListening = false;
+    micBtn.classList.remove('is-active');
+    headline.textContent = "Click Circular Button to Talk";
+    pill.textContent = "Single-Click Continuous";
+    pill.className = "text-[11px] px-2 py-0.5 rounded-full bg-[#F3EFEA] text-[#5C5249] font-medium";
     return;
   }
 
+  // Start continuous listening
   try {
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = state.language === 'ta' ? 'ta-IN' : (state.language === 'hi' ? 'hi-IN' : 'en-US');
+    recognition.lang = state.activeLanguage === 'ta' ? 'ta-IN' : (state.activeLanguage === 'hi' ? 'hi-IN' : 'en-US');
 
     recognition.onstart = () => {
-      state.isRecording = true;
-      micBtn.className = "px-3.5 py-2 rounded-xl bg-[#FDF3ED] text-[#C85A32] border border-[#F5D3C4] font-semibold text-xs flex items-center space-x-1.5 transition shadow-sm";
-      micLabel.textContent = "Listening Live...";
+      state.isContinuousListening = true;
+      micBtn.classList.add('is-active');
+      headline.textContent = "Listening Live (Speak in any language)...";
+      pill.textContent = "Live Active";
+      pill.className = "text-[11px] px-2 py-0.5 rounded-full bg-[#FDF3ED] text-[#C85A32] font-semibold border border-[#F5D3C4]";
     };
 
     recognition.onresult = (event) => {
@@ -332,107 +322,200 @@ function toggleSpeechRecognition() {
         }
       }
 
-      if (interim && state.websocket && state.websocket.readyState === WebSocket.OPEN) {
-        state.websocket.send(JSON.stringify({
+      if (interim) {
+        dispatchMessage({
           type: 'interim_speech',
           turn_id: 'turn_live',
           text: interim
-        }));
+        });
       }
 
-      if (finalized && state.websocket && state.websocket.readyState === WebSocket.OPEN) {
-        state.websocket.send(JSON.stringify({
+      if (finalized) {
+        dispatchMessage({
           type: 'message',
           text: finalized,
           input_modality: 'speech'
-        }));
+        });
       }
     };
 
     recognition.onerror = (e) => {
-      console.warn("Speech recognition error:", e.error);
+      console.warn("Speech recognition warning:", e.error);
     };
 
     recognition.onend = () => {
-      if (state.isRecording) {
+      // Auto-restart if user still wants continuous listening
+      if (state.isContinuousListening) {
         try { recognition.start(); } catch (err) {}
       } else {
-        micBtn.className = "px-3.5 py-2 rounded-xl bg-white hover:bg-[#F1ECE3] text-[#584F47] border border-[#D5CDC0] font-medium text-xs flex items-center space-x-1.5 transition shadow-sm";
-        micLabel.textContent = "Start Voice Mic";
+        micBtn.classList.remove('is-active');
+        headline.textContent = "Click Circular Button to Talk";
+        pill.textContent = "Single-Click Continuous";
+        pill.className = "text-[11px] px-2 py-0.5 rounded-full bg-[#F3EFEA] text-[#5C5249] font-medium";
       }
     };
 
     recognition.start();
     state.recognition = recognition;
   } catch (err) {
-    console.error("Failed to start speech recognition:", err);
+    console.error("Speech recognition startup error:", err);
   }
 }
 
-// Fallback Browser TTS
-function speakFallback(text, lang) {
-  if (!('speechSynthesis' in window)) return;
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = lang === 'ta' ? 'ta-IN' : (lang === 'hi' ? 'hi-IN' : 'en-US');
-  window.speechSynthesis.speak(utterance);
-}
-
-// --- Role Switcher ---
-function setRole(role) {
-  state.role = role;
-  const deafBtn = document.getElementById('roleBtnDeaf');
-  const hearingBtn = document.getElementById('roleBtnHearing');
-
-  if (role === 'deaf') {
-    deafBtn.className = "px-3 py-1.5 rounded-md bg-[#C85A32] text-white font-medium hover:bg-[#B04B26] transition flex items-center space-x-1.5 shadow-sm";
-    hearingBtn.className = "px-3 py-1.5 rounded-md text-[#584F47] hover:text-[#231F1C] hover:bg-white transition flex items-center space-x-1.5";
-    document.getElementById('sendButtonLabel').textContent = "Llama Speak Live";
-  } else {
-    hearingBtn.className = "px-3 py-1.5 rounded-md bg-[#C85A32] text-white font-medium hover:bg-[#B04B26] transition flex items-center space-x-1.5 shadow-sm";
-    deafBtn.className = "px-3 py-1.5 rounded-md text-[#584F47] hover:text-[#231F1C] hover:bg-white transition flex items-center space-x-1.5";
-    document.getElementById('sendButtonLabel').textContent = "Send Message";
-  }
-}
-
-// --- Llama Mode Switcher ---
-function setLlamaMode(mode) {
-  state.llamaMode = mode;
-  const expandBtn = document.getElementById('modeExpandBtn');
-  const directBtn = document.getElementById('modeDirectBtn');
-
-  if (mode === 'expand') {
-    expandBtn.className = "px-2.5 py-1 rounded-md bg-white text-[#C85A32] font-semibold shadow-sm transition";
-    directBtn.className = "px-2.5 py-1 rounded-md text-[#584F47] hover:text-[#231F1C] font-medium transition";
-  } else {
-    directBtn.className = "px-2.5 py-1 rounded-md bg-white text-[#C85A32] font-semibold shadow-sm transition";
-    expandBtn.className = "px-2.5 py-1 rounded-md text-[#584F47] hover:text-[#231F1C] font-medium transition";
-  }
-}
-
-// --- Language Selector ---
-function changeLanguage(lang) {
-  state.language = lang;
+// --- Outbox Queue & Safe Dispatcher ---
+function dispatchMessage(payload) {
   if (state.websocket && state.websocket.readyState === WebSocket.OPEN) {
-    state.websocket.send(JSON.stringify({
-      type: 'update_profile',
-      updates: { language: lang }
-    }));
+    state.websocket.send(JSON.stringify(payload));
+  } else {
+    // Save to local outbox queue if network drops
+    state.outboxQueue.push(payload);
   }
 }
 
-// --- Accessibility Controls ---
+// --- Direct Text Typing for Non-Verbal Participants ---
+function sendTypedText() {
+  const input = document.getElementById('textInputComposer');
+  const text = input.value.trim();
+  if (!text) return;
+
+  dispatchMessage({
+    type: 'message',
+    text: text,
+    input_modality: 'text'
+  });
+
+  input.value = '';
+}
+
+// --- 1-Click Assistive Soundboard ---
+function triggerSoundboard(phrase) {
+  dispatchMessage({
+    type: 'message',
+    text: phrase,
+    input_modality: 'aac',
+    is_aac: true
+  });
+}
+
+// --- Neural TTS Synthesis Helper ---
+function fetchNeuralTTS(text, lang) {
+  fetch('/api/tts/speak', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text, language: lang || state.activeLanguage })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.audio_data) {
+      audioPlayer.enqueue(data.audio_data);
+    }
+  })
+  .catch(() => {
+    // Fallback to browser Web Speech API if server TTS is unreachable
+    if ('speechSynthesis' in window) {
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = lang === 'ta' ? 'ta-IN' : 'en-US';
+      window.speechSynthesis.speak(utt);
+    }
+  });
+}
+
+// --- Auto 3-Way Scenario Demonstration (For Judges) ---
+function runAuto3WayDemo() {
+  audioPlayer.stopAndCancel(false);
+
+  const scenario = [
+    {
+      speaker: 'Anand (Tamil Speaker)',
+      roleId: 'tileAnand',
+      text: 'வணக்கம், நாம் இன்றைய கலந்துரையாடலை தொடங்கலாமா?',
+      translated: 'Hello, shall we begin today\'s discussion?',
+      lang: 'ta',
+      targetLang: 'en',
+      delay: 500,
+      modality: 'speech'
+    },
+    {
+      speaker: 'Sarah (Deaf Communicator)',
+      roleId: 'tileSarah',
+      text: 'I can read your Tamil speech clearly on my English captions screen.',
+      translated: 'உங்கள் தமிழ் பேச்சை எனது ஆங்கில தலைப்புகளில் தெளிவாக படிக்க முடிகிறது.',
+      lang: 'en',
+      targetLang: 'ta',
+      delay: 3400,
+      modality: 'captions'
+    },
+    {
+      speaker: 'Liam (Non-Verbal AAC)',
+      roleId: 'tileLiam',
+      text: 'I am typing this via the soundboard, and you are hearing it as spoken voice.',
+      translated: 'நான் இதை ஒலி பலகை மூலம் தட்டச்சு செய்கிறேன், அதை நீங்கள் பேசும் குரலாகக் கேட்கிறீர்கள்.',
+      lang: 'en',
+      targetLang: 'ta',
+      delay: 6600,
+      modality: 'aac'
+    },
+    {
+      speaker: 'Anand (Interruption / Barge-in)',
+      roleId: 'tileAnand',
+      text: 'சரியாக சொன்னீர்கள், குறுக்கீடுகள் வந்தாலும் நமது உரையாடல் தடையின்றி நடக்கிறது!',
+      translated: 'Exactly right, even when interruptions occur our conversation continues seamlessly!',
+      lang: 'ta',
+      targetLang: 'en',
+      delay: 9600,
+      modality: 'speech',
+      isBargeIn: true
+    }
+  ];
+
+  scenario.forEach((step, idx) => {
+    setTimeout(() => {
+      highlightParticipantTile(step.speaker);
+
+      if (step.isBargeIn) {
+        audioPlayer.stopAndCancel(true);
+      }
+
+      displayCaptions(step.speaker, step.translated, step.targetLang, true);
+
+      addTranscriptEntry({
+        seq_id: idx + 1,
+        sender_id: 'demo_' + step.roleId,
+        sender_name: step.speaker,
+        original_text: step.text,
+        display_text: `${step.text} → [${step.targetLang.toUpperCase()}]: ${step.translated}`,
+        input_modality: step.modality,
+        timestamp: Date.now() / 1000
+      });
+
+      // Play synthesized audio for listeners
+      if (!state.isAudioMuted && step.roleId !== 'tileSarah') {
+        fetchNeuralTTS(step.translated, step.targetLang);
+      }
+    }, step.delay);
+  });
+}
+
+// --- Settings & Accessibility Functions ---
+function changeLanguage(lang) {
+  state.activeLanguage = lang;
+  if (state.recognition) {
+    state.recognition.lang = lang === 'ta' ? 'ta-IN' : (lang === 'hi' ? 'hi-IN' : 'en-US');
+  }
+}
+
 function toggleHighContrast() {
   state.isHighContrast = !state.isHighContrast;
-  const banner = document.getElementById('captionContainer');
+  const container = document.getElementById('captionContainer');
   if (state.isHighContrast) {
-    banner.classList.add('high-contrast');
+    container.classList.add('high-contrast');
   } else {
-    banner.classList.remove('high-contrast');
+    container.classList.remove('high-contrast');
   }
 }
 
 function adjustCaptionSize(delta) {
-  state.captionSize = Math.max(16, Math.min(42, state.captionSize + delta * 3));
+  state.captionSize = Math.max(16, Math.min(44, state.captionSize + delta * 3));
   const captionEl = document.getElementById('liveCaptionText');
   captionEl.style.fontSize = `${state.captionSize}px`;
 }
@@ -441,48 +524,12 @@ function toggleAudioMute() {
   state.isAudioMuted = !state.isAudioMuted;
   const icon = document.getElementById('muteIcon');
   if (state.isAudioMuted) {
-    audioPlayer.stopAll();
+    audioPlayer.stopAndCancel(false);
     icon.setAttribute('data-lucide', 'volume-x');
   } else {
     icon.setAttribute('data-lucide', 'volume-2');
   }
   lucide.createIcons();
-}
-
-// --- Demo Simulation Scenario ---
-function runConferenceDemo() {
-  const steps = [
-    { speaker: 'Speaking Partner', text: 'Hello, can you hear me okay? We are starting the meeting now.', lang: 'en', delay: 800 },
-    { speaker: 'Deaf Communicator', text: 'I am deaf and reading your words via live captions. I am typing my response now.', lang: 'en', delay: 2800 },
-    { speaker: 'Speaking Partner', text: 'That is wonderful. The Llama pipeline is converting your typed words into real-time spoken audio.', lang: 'en', delay: 5200 },
-    { speaker: 'Deaf Communicator', text: 'Yes, with low-latency streaming TTS, the speech plays clause by clause immediately.', lang: 'en', delay: 7800 }
-  ];
-
-  steps.forEach((step) => {
-    setTimeout(() => {
-      displayLiveCaption(step.speaker, step.text, step.lang, true);
-      addTranscriptMessage({
-        sender_id: step.speaker === 'Deaf Communicator' ? state.clientId : 'partner_id',
-        sender_name: step.speaker,
-        original_text: step.text,
-        input_modality: step.speaker === 'Deaf Communicator' ? 'llama_assisted' : 'speech',
-        timestamp: Date.now() / 1000
-      });
-      // Synthesize neural voice for Deaf Communicator
-      if (step.speaker === 'Deaf Communicator' && !state.isAudioMuted) {
-        fetch('/api/tts/speak', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: step.text, language: step.lang })
-        })
-        .then(r => r.json())
-        .then(data => {
-          if (data.audio_data) audioPlayer.enqueue(data.audio_data);
-        })
-        .catch(() => {});
-      }
-    }, step.delay);
-  });
 }
 
 function escapeHtml(str) {
@@ -494,32 +541,26 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-// Initialize on DOM load
+// Initialize on DOM Ready
 window.addEventListener('DOMContentLoaded', () => {
   initWebSocket();
   lucide.createIcons();
 
-  // Check Llama Status
-  fetch('/api/llama/status')
+  // Check Multilingual Model Status
+  fetch('/api/qwen/status')
     .then(r => r.json())
     .then(status => {
-      const textEl = document.getElementById('llamaStatusText');
-      if (status.connected) {
-        textEl.textContent = `Llama AI: Connected (${status.active_model})`;
-      } else {
-        textEl.textContent = `Llama AI: Active (${status.active_model})`;
+      const statusText = document.getElementById('modelStatusText');
+      if (statusText) {
+        statusText.textContent = `${status.engine || 'Qwen 2.5'}: Active`;
       }
     })
-    .catch(() => {
-      document.getElementById('llamaStatusText').textContent = 'Llama AI: Active';
-    });
+    .catch(() => {});
 
-  // Enter key in textarea
-  const input = document.getElementById('messageInput');
-  input?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      dispatchLlamaMessage();
+  // Enter key support for text input
+  document.getElementById('textInputComposer')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      sendTypedText();
     }
   });
 });

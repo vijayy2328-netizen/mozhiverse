@@ -1,0 +1,28 @@
+Hmm leave the def concept now we need the ...concept like .  A translator like hmm if a person talk in a language then it will convert to them  Real-Time Multimodal Communication Across Language and Speech Barriers
+
+Communication Accessibility
+
+OLUE 1
+
+Three people share one conversation, yet no two of them speak, listen or reply the same
+
+way.
+
+OLUE 2
+
+A sentence spoken in Tamil may need the arrive as English text, or as a voice that nobody
+
+actually spoke.
+
+OLUE 3
+
+Interruptions, late translations and an unstable connection must not break the flow of a live call,In an increasingly connected world, communication between individuals is still constrained by differences in spoken languages, hearing capabilities, speech abilities, and preferred methods of interaction. A person speaking Tamil may need to communicate with someone who understands only English, while another participant may be unable to speak and must rely entirely on typed communication. In conventional communication systems, these differences often require separate translation applications, interpreters, text-based messaging tools, or additional assistance, disrupting the
+
+natural flow of a conversation.
+
+Consider a live conversation in which participants have different language preferences and communication requirements. One participant speaks naturally into their device, another receives information more comfortably through text, and a third needs to type a response that the other participants can hear as spoken language. During the same conversation, spoken input may need to be interpreted, translated, transformed into an appropriate output format, and delivered to the intended recipient withoutThe complexity increases when participants interrupt one another, respond before a previous translation has completed, change languages during a conversation, or experience unstable network conditions. A translation that arrives too late may no longer be relevant to the current discussion. Incorrect speech recognition can change the meaning of an instruction, while an incomplete message may be mistaken for a finished statement. Similarly, a participant who communicates through text must be able to contribute naturally without their messages becoming disconnected from the timing and context of the ongoing conversation.
+
+The challenge extends beyond language conversion. Participants must be able to communicate through different input and output modalities while remaining part of the same continuous interaction. Spoken communication may need to become translated speech or readable text; typed communication mau need to become translated text or spoken output. The receiving participant's language and accessibility preferences must be respected without creating separate, disconnected conversations for each communication method.The challenge extends beyond language conversion. Participants must be ab to communicate through different input and output modalities while remaining part of the same continuous interaction. Spoken communication ma need to become translated speech or readable text; typed communication may need to become translated text or spoken output. The receiving participant's language and accessibility preferences must be respected without creating separate, disconnected conversations for each communication method.
+
+Design and implement a functional communication solution capable of supporting these diverse interactions through a live voice connection. The system must maintain conversational continuity across participants with different language preferences and communication abilities, while addressing the practical challenges of timing, message ordering, interruptions, uncertain recognition, translation delays, and connection failures. The resulting experience must allow participants to exchange information naturally, regardless of whether they communicate primarily through speech, text, or an accessible combination of both.
+ We havw to work on this title soo we need a mulitlangual model and wirh perfect low latency snd can able to handle anything and we we need to many this  into a groundbreaking project with more features and than othet apps ot web or ai in the world and make real time conversation hmm like dont need to switch the languages.   Just listen to the live continously conversation and convert real time fastly lets goo makd the ui sinple dude like click the button and talk angthing dont need to press long or shit ok like a circle button pressed snd talked  ..lets goo bro make it like a professional product based ok no ai slop no emojies and add eveythung into the git and also create a myrepoet.txt fill it simple lines so that i can read it before the explanation to the judges ok soo lets gooo now dowblaod a low weight model but no hallucinations be cool and use approx 2b qwen is best i think so choose one and do iy and my pc have 500gb and its a rtx 5060 gpu with 8gb vram and 61gb ram model loq laptop now make it all and add more features lets toooo

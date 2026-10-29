@@ -1,30 +1,31 @@
-/* Mozhiverse Light Warm Accessible Design System
-   Designed for Deaf and Hard-of-Hearing Communicators
-   Light warm palette, WCAG 2.1 AAA high contrast, zero emojis, zero AI slop
+/* Mozhiverse Professional Product Design System
+   WCAG 2.1 AAA Accessible, Light Warm Palette, Zero Emojis, Zero AI Slop
 */
 
 :root {
-  --bg-primary: #F8F6F1;
-  --bg-secondary: #F1ECE3;
+  --bg-primary: #FAF8F5;
+  --bg-secondary: #F3EFEA;
   --surface-card: #FFFFFF;
-  --surface-hover: #FBF9F6;
-  --border-subtle: #E5DFD5;
-  --border-strong: #D5CDC0;
+  --surface-hover: #F8F5F0;
+  
+  --border-subtle: #E8E2D8;
+  --border-medium: #D8D0C3;
+  --border-focus: #C85A32;
   
   --brand-terracotta: #C85A32;
   --brand-terracotta-hover: #B04B26;
   --brand-terracotta-soft: #FDF3ED;
   --brand-terracotta-border: #F5D3C4;
   
-  --status-emerald: #2E7D32;
-  --status-amber: #B45309;
-  --status-rose: #C53030;
+  --accent-amber: #B45309;
+  --accent-forest: #2E7D32;
+  --accent-slate: #4A5568;
   
-  --text-primary: #231F1C;
-  --text-secondary: #584F47;
-  --text-muted: #857A70;
+  --text-primary: #1F1916;
+  --text-secondary: #5C5249;
+  --text-muted: #8C8074;
   
-  --caption-bg: #1F1B18;
+  --caption-bg: #1B1715;
   --caption-text: #FFFFFF;
   --caption-highlight: #FFE082;
 }
@@ -42,27 +43,88 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Warm Card Containers */
-.warm-card {
-  background: var(--surface-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(35, 31, 28, 0.04), 0 1px 2px rgba(35, 31, 28, 0.02);
-}
-
-.warm-card-elevated {
+/* Professional Product Cards */
+.product-card {
   background: var(--surface-card);
   border: 1px solid var(--border-subtle);
   border-radius: 14px;
-  box-shadow: 0 4px 6px -1px rgba(35, 31, 28, 0.06), 0 2px 4px -2px rgba(35, 31, 28, 0.04);
+  box-shadow: 0 1px 3px rgba(31, 25, 22, 0.04), 0 1px 2px rgba(31, 25, 22, 0.02);
+  transition: all 0.2s ease;
 }
 
-/* Large Captions Banner for Deaf Users */
+.product-card:hover {
+  border-color: var(--border-medium);
+}
+
+.product-card-elevated {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(31, 25, 22, 0.05), 0 2px 4px -2px rgba(31, 25, 22, 0.03);
+}
+
+/* 3-Way Conference Tile */
+.participant-tile {
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 16px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.participant-tile.active-turn {
+  border-color: var(--brand-terracotta);
+  box-shadow: 0 0 0 2px rgba(200, 90, 50, 0.15);
+  background: #FFFAF7;
+}
+
+/* Big Circular Continuous Mic Button */
+.circular-mic-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--surface-card);
+  border: 2px solid var(--border-medium);
+  color: var(--brand-terracotta);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(31, 25, 22, 0.08);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+.circular-mic-btn:hover {
+  transform: scale(1.05);
+  border-color: var(--brand-terracotta);
+  background: var(--brand-terracotta-soft);
+}
+
+.circular-mic-btn:active {
+  transform: scale(0.96);
+}
+
+.circular-mic-btn.is-active {
+  background: var(--brand-terracotta);
+  border-color: var(--brand-terracotta-hover);
+  color: #FFFFFF;
+  box-shadow: 0 0 0 6px rgba(200, 90, 50, 0.2), 0 8px 16px rgba(200, 90, 50, 0.3);
+  animation: continuousPulse 2s infinite ease-in-out;
+}
+
+@keyframes continuousPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(200, 90, 50, 0.2), 0 6px 14px rgba(200, 90, 50, 0.25); }
+  50% { box-shadow: 0 0 0 10px rgba(200, 90, 50, 0.1), 0 8px 20px rgba(200, 90, 50, 0.35); }
+}
+
+/* Captions Banner */
 .caption-banner {
   background-color: var(--caption-bg);
   color: var(--caption-text);
   border-radius: 14px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
 }
 
@@ -72,17 +134,11 @@ body {
   border: 2px solid #FFFF00;
 }
 
-.caption-text-body {
-  line-height: 1.4;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
 .caption-highlight {
   color: var(--caption-highlight);
 }
 
-/* Voice & Speaking Pulse Waveform */
+/* Sound Bars */
 .sound-bars {
   display: inline-flex;
   align-items: center;
@@ -108,25 +164,14 @@ body {
   50% { transform: scaleY(1); opacity: 1; }
 }
 
-/* Streaming Llama Tokens Token Indicator */
-.streaming-token {
-  display: inline;
-  animation: fadeInToken 0.15s ease-out;
-}
-
-@keyframes fadeInToken {
-  from { opacity: 0; transform: translateY(1px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Assistive Response Chips */
+/* Assistive Chips */
 .assistive-chip {
   background: #FFFFFF;
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
-  padding: 8px 14px;
+  padding: 8px 12px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -142,10 +187,10 @@ body {
 }
 
 .assistive-chip:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
-/* Clean Custom Scrollbar */
+/* Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -156,10 +201,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #D9D2C7;
+  background: #D8D0C3;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #C4BBB0;
+  background: #C4B9A9;
 }
