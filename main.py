@@ -5,16 +5,19 @@ FastAPI server powering Mozhiverse (மொழிverse): Universal Multimodal, Mu
 
 import os
 import json
+import time
 import logging
 from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from translation_engine import translator
 from room_manager import room_manager, ParticipantProfile
+from llama_pipeline import llama_pipeline
+from tts_engine import tts_engine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("Mozhiverse.Server")
@@ -65,6 +68,35 @@ async def translate_text(req: TranslateRequest):
         "target_lang": req.target_lang,
         "translated_text": translated
     }
+
+class LlamaRequest(BaseModel):
+    text: str
+    mode: str = "expand"  # "expand" | "direct"
+    language: str = "en"
+    voice: Optional[str] = None
+
+class TTSRequest(BaseModel):
+    text: str
+    language: str = "en"
+    voice: Optional[str] = None
+
+@app.get("/api/llama/status")
+async def get_llama_status():
+    return llama_pipeline.check_ollama_status()
+
+@app.post("/api/tts/speak")
+async def tts_speak(req: TTSRequest):
+    audio_uri = await tts_engine.synthesize_to_base64(req.text, lang=req.language, voice=req.voice)
+    if not audio_uri:
+        return JSONResponse(status_code=500, content={"error": "Failed to synthesize audio"})
+    return {"text": req.text, "language": req.language, "audio_data": audio_uri}
+
+@app.post("/api/llama/stream")
+async def stream_llama_pipeline(req: LlamaRequest):
+    async def event_generator():
+        async for chunk in llama_pipeline.expand_and_stream(req.text, mode=req.mode, lang=req.language, voice=req.voice):
+            yield f"data: {json.dumps(chunk)}\n\n"
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.get("/api/rooms")
 async def get_rooms():
@@ -164,6 +196,58 @@ async def websocket_room_endpoint(websocket: WebSocket, room_id: str, client_id:
                         turn_id=turn_id,
                         is_aac=is_aac
                     )
+
+            elif action == "llama_stream":
+                # Real-time Llama token expansion + streaming audio chunk synthesis
+                raw_text = data.get("text", "").strip()
+                if raw_text:
+                    mode = data.get("mode", "expand")
+                    target_lang = data.get("language", profile.language)
+                    turn_id = data.get("turn_id") or f"turn_{int(time.time() * 1000)}"
+
+                    await websocket.send_json({
+                        "type": "llama_started",
+                        "turn_id": turn_id,
+                        "input_text": raw_text
+                    })
+
+                    full_generated_text = ""
+                    async for item in llama_pipeline.expand_and_stream(raw_text, mode=mode, lang=target_lang):
+                        itype = item.get("type")
+                        if itype == "token":
+                            await websocket.send_json({
+                                "type": "llama_token",
+                                "turn_id": turn_id,
+                                "token": item.get("text", "")
+                            })
+                        elif itype == "audio_chunk":
+                            await room.broadcast({
+                                "type": "live_audio_chunk",
+                                "sender_id": client_id,
+                                "sender_name": profile.name,
+                                "turn_id": turn_id,
+                                "chunk_index": item.get("chunk_index"),
+                                "text": item.get("text"),
+                                "audio_data": item.get("audio_data"),
+                                "is_final": item.get("is_final")
+                            })
+                            await websocket.send_json({
+                                "type": "llama_chunk_sent",
+                                "turn_id": turn_id,
+                                "chunk_index": item.get("chunk_index"),
+                                "text": item.get("text")
+                            })
+                        elif itype == "done":
+                            full_generated_text = item.get("full_text", raw_text)
+
+                    if full_generated_text:
+                        await room.post_message(
+                            sender_id=client_id,
+                            text=full_generated_text,
+                            input_modality="llama_assisted",
+                            turn_id=turn_id,
+                            is_aac=False
+                        )
 
             elif action == "cancel_audio":
                 # Barge-in interruption signal: notify all peers to cancel ongoing speech playback
