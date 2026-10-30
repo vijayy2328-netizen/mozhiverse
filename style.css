@@ -1,0 +1,179 @@
+/* Mozhiverse 3-Person Concurrent Multimodal Stage Design
+   Light warm palette, high contrast accessibility, zero emojis, zero AI slop
+*/
+
+:root {
+  --bg-app: #FAF8F5;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #F5EFE8;
+  --bg-hover: #ECE4DA;
+  
+  --border-light: #E8E0D5;
+  --border-medium: #D4C9BC;
+  
+  --brand-terracotta: #C85A32;
+  --brand-terracotta-hover: #AE4B26;
+  --brand-terracotta-soft: #FDF3ED;
+  --brand-terracotta-border: #F5D3C4;
+  
+  --text-main: #1C1815;
+  --text-muted: #5C5248;
+  --text-subtle: #8A7E73;
+  
+  --anand-color: #C85A32;
+  --sarah-color: #2E7D32;
+  --liam-color: #B45309;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 3-Column Participant Panels */
+.participant-panel {
+  background: #FFFFFF;
+  border: 1.5px solid var(--border-light);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(28, 24, 21, 0.04);
+}
+
+.participant-panel:hover {
+  border-color: var(--border-medium);
+}
+
+.participant-panel.is-active-speaker {
+  border-color: var(--brand-terracotta);
+  box-shadow: 0 0 0 3px rgba(200, 90, 50, 0.18), 0 6px 20px rgba(200, 90, 50, 0.08);
+  background: #FFFAF8;
+}
+
+/* Sound Bars */
+.sound-bars {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 14px;
+}
+
+.sound-bar {
+  width: 2.5px;
+  background-color: var(--brand-terracotta);
+  border-radius: 2px;
+  animation: barPulse 0.9s ease-in-out infinite;
+}
+
+.sound-bar:nth-child(1) { height: 4px; animation-delay: 0.1s; }
+.sound-bar:nth-child(2) { height: 12px; animation-delay: 0.25s; }
+.sound-bar:nth-child(3) { height: 8px; animation-delay: 0.4s; }
+.sound-bar:nth-child(4) { height: 11px; animation-delay: 0.15s; }
+.sound-bar:nth-child(5) { height: 6px; animation-delay: 0.3s; }
+
+@keyframes barPulse {
+  0%, 100% { transform: scaleY(0.4); opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+/* Big Action Mic Button */
+.mic-action-btn {
+  background: #FFFFFF;
+  border: 1.5px solid var(--brand-terracotta);
+  color: var(--brand-terracotta);
+  font-weight: 700;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.mic-action-btn:hover {
+  background: var(--brand-terracotta-soft);
+  transform: translateY(-1px);
+}
+
+.mic-action-btn.is-active {
+  background: var(--brand-terracotta);
+  color: #FFFFFF;
+  animation: pulseGlow 1.8s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(200, 90, 50, 0.2); }
+  50% { box-shadow: 0 0 0 8px rgba(200, 90, 50, 0.08); }
+}
+
+/* Captions Display Box (Sarah) */
+.captions-screen {
+  background: #1A1614;
+  color: #FFFFFF;
+  border-radius: 12px;
+  padding: 14px;
+  transition: all 0.2s ease;
+}
+
+.captions-screen.high-contrast {
+  background: #000000;
+  color: #FFFF00;
+  border: 2px solid #FFFF00;
+}
+
+/* Quick Assistive Pills */
+.aac-pill {
+  background: #FFFFFF;
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.aac-pill:hover {
+  background: var(--brand-terracotta-soft);
+  border-color: var(--brand-terracotta-border);
+  color: var(--brand-terracotta);
+  transform: translateY(-1px);
+}
+
+.aac-pill:active {
+  transform: scale(0.96);
+}
+
+/* Chat bubble */
+.chat-row {
+  background: #FFFFFF;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 10px 12px;
+  transition: all 0.15s ease;
+}
+
+/* Clean Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #DDD5C9;
+  border-radius: 4px;
+}

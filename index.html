@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mozhiverse - 3-Person Real-Time Multimodal Communication Bridge</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Vector Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-[#FAF8F5] text-[#1C1815] min-h-screen flex flex-col font-sans select-none selection:bg-[#F5D3C4] selection:text-[#AE4B26]">
+
+  <!-- Top App Navigation Bar -->
+  <header class="bg-white border-b border-[#E8E0D5] px-5 py-3 sticky top-0 z-50 shadow-xs">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      
+      <!-- Brand & Status -->
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-lg bg-[#C85A32] flex items-center justify-center text-white shadow-xs">
+          <i data-lucide="radio" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-sm font-bold tracking-tight text-[#1C1815]">Mozhiverse</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#FDF3ED] text-[#C85A32] border border-[#F5D3C4] font-semibold">
+              3-Person Live Multimodal Hub
+            </span>
+          </div>
+          <div class="flex items-center space-x-2 text-[11px] text-[#5C5248]">
+            <span class="inline-flex items-center space-x-1 text-[#2E7D32] font-semibold">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#2E7D32]"></span>
+              <span>All 3 Participants Connected Simultaneously</span>
+            </span>
+            <span>•</span>
+            <span class="text-[#8A7E73]">Qwen 2.5 Neural Engine</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Bar (Auto Demo, Contrast, Font Size, Audio Mute) -->
+      <div class="flex items-center space-x-2">
+        <button onclick="runAuto3WayDemo()" title="Run Automated 3-Participant Scenario for Judges" class="px-3.5 py-1.5 rounded-lg bg-[#C85A32] hover:bg-[#AE4B26] text-white font-semibold text-xs transition flex items-center space-x-1.5 shadow-xs">
+          <i data-lucide="play" class="w-3.5 h-3.5"></i>
+          <span>Auto 3-Way Demo (For Judges)</span>
+        </button>
+
+        <button id="contrastBtn" onclick="toggleHighContrast()" title="Toggle High Contrast" class="p-2 rounded-lg bg-white hover:bg-[#F5EFE8] text-[#5C5248] transition border border-[#E8E0D5]">
+          <i data-lucide="contrast" class="w-4 h-4"></i>
+        </button>
+
+        <div class="flex items-center bg-white rounded-lg p-0.5 border border-[#E8E0D5]">
+          <button onclick="adjustCaptionSize(-1)" title="Smaller Text" class="px-2 py-1 text-[#5C5248] hover:text-[#1C1815] text-xs font-bold">A-</button>
+          <span class="text-[9px] text-[#8A7E73] px-1 font-semibold">CC</span>
+          <button onclick="adjustCaptionSize(1)" title="Larger Text" class="px-2 py-1 text-[#5C5248] hover:text-[#1C1815] text-xs font-bold">A+</button>
+        </div>
+
+        <button id="audioMuteBtn" onclick="toggleAudioMute()" title="Mute/Unmute Incoming Voice Audio" class="p-2 rounded-lg bg-white hover:bg-[#F5EFE8] text-[#5C5248] transition border border-[#E8E0D5]">
+          <i data-lucide="volume-2" id="muteIcon" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Problem Statement Architectural Mapping Bar -->
+  <div class="bg-[#F5EFE8] border-b border-[#E8E0D5] px-5 py-2">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between text-xs text-[#5C5248] gap-2">
+      <div class="flex items-center space-x-3">
+        <span class="font-bold text-[#1C1815]">Simultaneous Live Communication:</span>
+        <span class="inline-flex items-center space-x-1">
+          <i data-lucide="check" class="w-3 h-3 text-[#2E7D32]"></i>
+          <span><strong>Person 1</strong> (Anand: Tamil Voice)</span>
+        </span>
+        <span>↔</span>
+        <span class="inline-flex items-center space-x-1">
+          <i data-lucide="check" class="w-3 h-3 text-[#2E7D32]"></i>
+          <span><strong>Person 2</strong> (Sarah: Deaf English Captions)</span>
+        </span>
+        <span>↔</span>
+        <span class="inline-flex items-center space-x-1">
+          <i data-lucide="check" class="w-3 h-3 text-[#2E7D32]"></i>
+          <span><strong>Person 3</strong> (Liam: Non-Verbal Voice)</span>
+        </span>
+      </div>
+      <div id="interruptionBanner" class="hidden text-[11px] px-2.5 py-0.5 rounded bg-[#C53030] text-white font-bold animate-pulse">
+        Barge-in Interruption Detected: Obsolete Audio Cancelled
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Multi-Participant Stage: 3 Columns Visible Simultaneously -->
+  <main class="max-w-7xl mx-auto w-full px-5 py-5 flex-1 flex flex-col space-y-5">
+
+    <!-- 3 Participants Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      
+      <!-- ========================================== -->
+      <!-- COLUMN 1: Anand (Tamil Voice Speaker) -->
+      <!-- ========================================== -->
+      <div id="panelAnand" class="participant-panel p-4 space-y-3.5">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-2 border-b border-[#E8E0D5]">
+          <div class="flex items-center space-x-2">
+            <div class="w-7 h-7 rounded-full bg-[#FDF3ED] border border-[#F5D3C4] flex items-center justify-center font-bold text-xs text-[#C85A32]">
+              A
+            </div>
+            <div>
+              <div class="text-xs font-bold text-[#1C1815]">Anand</div>
+              <div class="text-[10px] text-[#5C5248]">Tamil Voice Speaker</div>
+            </div>
+          </div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#FDF3ED] text-[#C85A32] font-semibold border border-[#F5D3C4]">
+            Modality: Voice
+          </span>
+        </div>
+
+        <!-- Anand's Status & Audio State -->
+        <div class="p-3 bg-[#FAF8F5] rounded-xl border border-[#E8E0D5] text-xs space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-[#1C1815] text-[11px]">Speech Audio Output:</span>
+            <div id="anandAudioIndicator" class="hidden sound-bars" title="Audio playing">
+              <div class="sound-bar"></div><div class="sound-bar"></div><div class="sound-bar"></div>
+            </div>
+          </div>
+          <div id="anandAudioText" class="text-[11px] text-[#5C5248]">
+            Anand hears incoming English messages synthesized into spoken Tamil voice audio.
+          </div>
+        </div>
+
+        <!-- Big Mic Button for Anand -->
+        <button id="anandMicBtn" onclick="toggleAnandMic()" class="w-full py-3 rounded-xl mic-action-btn flex items-center justify-center space-x-2 shadow-xs">
+          <i data-lucide="mic" id="anandMicIcon" class="w-4 h-4"></i>
+          <span id="anandMicText">Speak in Tamil (Live Mic)</span>
+        </button>
+
+        <!-- Or Type in Tamil -->
+        <div class="space-y-1.5 pt-1">
+          <span class="text-[10px] font-semibold text-[#8A7E73]">Or type Tamil message:</span>
+          <div class="flex items-center space-x-1.5">
+            <input
+              id="anandTextInput"
+              type="text"
+              placeholder="வணக்கம், கூட்டத்தை தொடங்கலாமா?"
+              class="w-full text-xs p-2.5 bg-white border border-[#D4C9BC] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C85A32] text-[#1C1815]"
+            />
+            <button onclick="sendAnandText()" class="px-3 py-2.5 bg-[#C85A32] hover:bg-[#AE4B26] text-white rounded-xl text-xs font-bold transition flex-none">
+              Send
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========================================== -->
+      <!-- COLUMN 2: Sarah (Deaf Communicator) -->
+      <!-- ========================================== -->
+      <div id="panelSarah" class="participant-panel p-4 space-y-3.5">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-2 border-b border-[#E8E0D5]">
+          <div class="flex items-center space-x-2">
+            <div class="w-7 h-7 rounded-full bg-[#EDF7ED] border border-[#C8E6C9] flex items-center justify-center font-bold text-xs text-[#2E7D32]">
+              S
+            </div>
+            <div>
+              <div class="text-xs font-bold text-[#1C1815]">Sarah</div>
+              <div class="text-[10px] text-[#5C5248]">Deaf / Hard of Hearing</div>
+            </div>
+          </div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#EDF7ED] text-[#2E7D32] font-semibold border border-[#C8E6C9]">
+            Modality: Subtitles
+          </span>
+        </div>
+
+        <!-- Sarah's Giant Live Subtitles Screen -->
+        <div class="space-y-1">
+          <span class="text-[10px] font-bold text-[#2E7D32] uppercase tracking-wider block">Live English Captions:</span>
+          <div id="sarahCaptionsScreen" class="captions-screen min-h-[96px] flex flex-col justify-between shadow-xs">
+            <div id="sarahSubtitlesText" class="text-sm font-semibold leading-relaxed text-white">
+              Waiting for incoming speech from Anand or Liam...
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-[#352E2A] text-[10px] text-[#DDD5C9]">
+              <span id="sarahSpeakerTag">Live Speaker: None</span>
+              <span class="text-[#FFE082]">Real-Time Text</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sarah's Quick Typed Response -->
+        <div class="space-y-1.5 pt-1">
+          <span class="text-[10px] font-semibold text-[#8A7E73]">Sarah types reply in English:</span>
+          <div class="flex items-center space-x-1.5">
+            <input
+              id="sarahTextInput"
+              type="text"
+              placeholder="I can read your speech clearly in English..."
+              class="w-full text-xs p-2.5 bg-white border border-[#D4C9BC] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2E7D32] text-[#1C1815]"
+            />
+            <button onclick="sendSarahText()" class="px-3 py-2.5 bg-[#2E7D32] hover:bg-[#256628] text-white rounded-xl text-xs font-bold transition flex-none">
+              Send
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========================================== -->
+      <!-- COLUMN 3: Liam (Non-Verbal / AAC) -->
+      <!-- ========================================== -->
+      <div id="panelLiam" class="participant-panel p-4 space-y-3.5">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-2 border-b border-[#E8E0D5]">
+          <div class="flex items-center space-x-2">
+            <div class="w-7 h-7 rounded-full bg-[#FEF3C7] border border-[#FDE68A] flex items-center justify-center font-bold text-xs text-[#B45309]">
+              L
+            </div>
+            <div>
+              <div class="text-xs font-bold text-[#1C1815]">Liam</div>
+              <div class="text-[10px] text-[#5C5248]">Non-Verbal / Mute</div>
+            </div>
+          </div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#B45309] font-semibold border border-[#FDE68A]">
+            Modality: AAC / Voice
+          </span>
+        </div>
+
+        <!-- Liam's 1-Click AAC Soundboard -->
+        <div class="space-y-1.5">
+          <span class="text-[10px] font-bold text-[#B45309] uppercase tracking-wider block">1-Click Voice Soundboard:</span>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button onclick="triggerLiamAAC('Please wait a moment, I am typing my response.')" class="aac-pill">
+              <i data-lucide="clock" class="w-3 h-3 text-[#C85A32]"></i>
+              <span>Wait, typing</span>
+            </button>
+            <button onclick="triggerLiamAAC('Could you please repeat what you just said?')" class="aac-pill">
+              <i data-lucide="rotate-ccw" class="w-3 h-3 text-[#C85A32]"></i>
+              <span>Please repeat</span>
+            </button>
+            <button onclick="triggerLiamAAC('Yes, I agree with this approach completely.')" class="aac-pill">
+              <i data-lucide="check" class="w-3 h-3 text-[#2E7D32]"></i>
+              <span>I agree</span>
+            </button>
+            <button onclick="triggerLiamAAC('I have a question about this point.')" class="aac-pill">
+              <i data-lucide="help-circle" class="w-3 h-3 text-[#C85A32]"></i>
+              <span>Question</span>
+            </button>
+            <button onclick="triggerLiamAAC('Could you please type that out for me?')" class="aac-pill">
+              <i data-lucide="keyboard" class="w-3 h-3 text-[#C85A32]"></i>
+              <span>Please type</span>
+            </button>
+            <button onclick="triggerLiamAAC('Thank you very much for your patience.')" class="aac-pill">
+              <i data-lucide="heart" class="w-3 h-3 text-[#B45309]"></i>
+              <span>Thank you</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Liam's Custom Typed Speech -->
+        <div class="space-y-1.5 pt-1">
+          <span class="text-[10px] font-semibold text-[#8A7E73]">Type to synthesize spoken voice:</span>
+          <div class="flex items-center space-x-1.5">
+            <input
+              id="liamTextInput"
+              type="text"
+              placeholder="Type shorthand (e.g. 'agree meet 3pm')..."
+              class="w-full text-xs p-2.5 bg-white border border-[#D4C9BC] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#B45309] text-[#1C1815]"
+            />
+            <button onclick="sendLiamText()" class="px-3 py-2.5 bg-[#B45309] hover:bg-[#964306] text-white rounded-xl text-xs font-bold transition flex-none">
+              Speak
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Synchronized Live Canonical Transcript (Clue 3) -->
+    <section class="bg-white rounded-2xl border border-[#E8E0D5] p-4 flex flex-col space-y-3 shadow-xs">
+      <div class="flex items-center justify-between pb-2 border-b border-[#E8E0D5]">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="list-ordered" class="w-4 h-4 text-[#C85A32]"></i>
+          <h2 class="text-xs font-bold text-[#1C1815] uppercase tracking-wider">Synchronized 3-Way Canonical Transcript</h2>
+        </div>
+        <div class="text-[10px] text-[#8A7E73] flex items-center space-x-2">
+          <span>Turn-Sequenced (#1, #2, ...)</span>
+          <span>•</span>
+          <span>Barge-in Resilient</span>
+        </div>
+      </div>
+
+      <div id="transcriptList" class="overflow-y-auto space-y-2 pr-1 max-h-[220px] text-xs">
+        <div class="p-3 bg-[#FAF8F5] rounded-xl border border-[#E8E0D5] text-[#5C5248] text-xs">
+          Synchronized room ready. Speak or type from any of the three participant columns above. All three participants will receive translations concurrently in their preferred format!
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
