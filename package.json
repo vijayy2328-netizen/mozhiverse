@@ -9,7 +9,7 @@
     "dev:client": "npm --workspace client run dev",
     "build": "npm --workspace shared run build && npm --workspace server run build && npm --workspace client run build",
     "start": "npm --workspace server run start",
-    "test": "npm --workspace server run test",
+    "test": "npm run build:shared && npm --workspace server run test",
     "test:socket": "npm run build && node scripts/socket-smoke-test.mjs"
   },
   "devDependencies": {"concurrently":"^9.1.2","typescript":"^5.7.3"}

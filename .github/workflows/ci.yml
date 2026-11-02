@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build shared package
+        run: npm run build:shared
+
       - name: Run unit & room tests
         run: npm test
 
